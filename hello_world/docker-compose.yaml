@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  arangodb:
+    image: arangodb:3.11
+    container_name: arangodb
+    ports:
+      - "${ARANGO_PORT}:8529"
+    environment:
+      - ARANGO_ROOT_PASSWORD=${ARANGO_ROOT_PASSWORD}
+      - ARANGO_DB=${ARANGO_DB}
+      - ARANGO_USER=${ARANGO_USER}
+      - ARANGO_PASSWORD=${ARANGO_PASSWORD}
+    volumes:
+      - arangodb-data:/var/lib/arangodb3
+    restart: unless-stopped
+
+  fastapi:
+    build: .
+    container_name: fastapi_app
+    ports:
+      - "${FASTAPI_PORT}:8000"
+    environment:
+      - ARANGO_PORT=${ARANGO_PORT}
+      - ARANGO_DB=${ARANGO_DB}
+      - ARANGO_USER=${ARANGO_USER}
+      - ARANGO_PASSWORD=${ARANGO_PASSWORD}
+    depends_on:
+      - arangodb
+    restart: unless-stopped
+
+volumes:
+  arangodb-data:
