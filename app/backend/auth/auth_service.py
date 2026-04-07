@@ -15,8 +15,9 @@ class AuthService:
         
         hashed = hash_password(password)
         user = self.user_repo.create(username, hashed)
+        print("registered")
 
-        token = create_access_token({"sub": user.username})
+        token = create_access_token({"sub": user.user_key})
         return token
     
     def login(self, username: str, password: str):
@@ -28,5 +29,5 @@ class AuthService:
         if not verify_password(password, user.password):
             raise Exception("Invalid password")
         
-        token = create_access_token({"sub": user.username})
+        token = create_access_token({"sub": user.user_key})
         return token

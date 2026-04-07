@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from model.user import User
 
@@ -8,7 +8,7 @@ from core.security import hash_password
 class UserRepository:
 
     def __init__(self):
-        self.users = []
+        self.users: List[User] = []
         self._id_counter = 3
 
         self.users.append(
@@ -36,6 +36,13 @@ class UserRepository:
                 return user
         return None
     
+    def get_by_key(self, key: str) -> Optional[User]:
+        for user in self.users:
+            print(self.users)
+            if user.user_key == key:
+                return user
+        return None
+    
     def create(self, username: str, password: str) -> User:
         user = User(
             user_key=str(self._id_counter),
@@ -46,6 +53,8 @@ class UserRepository:
         )
 
         self.users.append(user)
+        print("created")
+        print(self.users)
         self._id_counter += 1
 
         return user
