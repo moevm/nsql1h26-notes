@@ -2,7 +2,6 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 
-from user.user_repository import UserRepository
 from auth.auth_service import AuthService
 from core.config import SECRET_KEY, ALGORITHM
 from core.container import user_repo

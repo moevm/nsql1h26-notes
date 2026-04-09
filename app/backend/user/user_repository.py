@@ -38,7 +38,6 @@ class UserRepository:
     
     def get_by_key(self, key: str) -> Optional[User]:
         for user in self.users:
-            print(self.users)
             if user.user_key == key:
                 return user
         return None
@@ -53,8 +52,6 @@ class UserRepository:
         )
 
         self.users.append(user)
-        print("created")
-        print(self.users)
         self._id_counter += 1
 
         return user
