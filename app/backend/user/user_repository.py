@@ -1,5 +1,5 @@
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from model.user import User
 
 from core.security import hash_password
@@ -16,7 +16,7 @@ class UserRepository:
                 user_key="a",
                 username="user",
                 password=hash_password("123456"),
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
                 role="User"
             )
         )
@@ -25,7 +25,7 @@ class UserRepository:
                 user_key="b",
                 username="admin",
                 password=hash_password("123456"),
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
                 role="Admin"
             )
         )
@@ -47,7 +47,7 @@ class UserRepository:
             user_key=str(self._id_counter),
             username=username,
             password=password,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
             role="User"
         )
 

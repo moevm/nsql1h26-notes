@@ -1,8 +1,5 @@
-from note.note_repository import NoteRepository
+from core.container import note_repo
 from note.note_service import NoteService
-
-
-note_repo = NoteRepository()
 
 
 def get_note_service():

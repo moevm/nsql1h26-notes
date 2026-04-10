@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class RegisterRequest(BaseModel):
     username: str
     password: str
+    confirm_password: str
 
 
 class LoginRequest(BaseModel):
@@ -13,4 +14,4 @@ class LoginRequest(BaseModel):
 
 class AuthResponse(BaseModel):
     access_token: str
-    token_type: str = "bearer"
+    refresh_token: str

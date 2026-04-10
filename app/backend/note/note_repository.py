@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
 
@@ -18,8 +18,8 @@ class NoteRepository:
             "note_key": self._generate_key(),
             "title": data.get("title"),
             "content": data.get("content"),
-            "created_at": datetime.now(),
-            "updated_at": datetime.now(),
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
             "is_parent": data.get("is_parent"),
             "parent_key": data.get("parent_key"),
             "user_ref": data.get("user_ref")
@@ -39,7 +39,7 @@ class NoteRepository:
             return None
         
         note.update(data)
-        note["update_at"] = datetime.now()
+        note["updated_at"] = datetime.now(timezone.utc)
 
         return note
         
