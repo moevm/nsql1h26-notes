@@ -1,59 +1,68 @@
 from typing import Optional, List
 from datetime import datetime, timezone
-from model.user import User
+from arango.database import StandardDatabase
 
+from model.user import User
 from core.security import hash_password
 
 
 class UserRepository:
 
-    def __init__(self):
-        self.users: List[User] = []
-        self._id_counter = 3
-
-        self.users.append(
-            User(
-                user_key="a",
-                username="user",
-                password=hash_password("123456"),
-                created_at=datetime.now(timezone.utc),
-                role="User"
-            )
-        )
-        self.users.append(
-            User(
-                user_key="b",
-                username="admin",
-                password=hash_password("123456"),
-                created_at=datetime.now(timezone.utc),
-                role="Admin"
-            )
-        )
+    def __init__(self, db: StandardDatabase):
+        self.db = db
+        self.collection = db.collection("users")
     
     def get_by_username(self, username: str) -> Optional[User]:
-        for user in self.users:
-            if user.username == username:
-                return user
-        return None
-    
-    def get_by_key(self, key: str) -> Optional[User]:
-        for user in self.users:
-            if user.user_key == key:
-                return user
-        return None
-    
-    def create(self, username: str, password: str) -> User:
-        user = User(
-            user_key=str(self._id_counter),
-            username=username,
-            password=password,
-            created_at=datetime.now(timezone.utc),
-            role="User"
+        query = """
+        FOR u IN users
+            FILTER u.username == @username
+            LIMIT 1
+            RETURN u
+        """
+
+        cursor = self.db.aql.execute(
+            query,
+            bind_vars={"username": username}
         )
 
-        self.users.append(user)
-        self._id_counter += 1
+        return self._data_to_user_model(next(cursor, None))
+    
+    def get_by_key(self, key: str) -> Optional[User]:
+        query = """
+        FOR u IN users
+            FILTER u._key == @key
+            LIMIT 1
+            RETURN u
+        """
 
-        return user
+        cursor = self.db.aql.execute(
+            query,
+            bind_vars={"key": key}
+        )
+        
+        return self._data_to_user_model(next(cursor, None))
     
+    def create(self, username: str, password: str) -> User:
+        data = {
+            "username": username,
+            "hashed_password": hash_password(password),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "User"
+        }
+
+        result = self.collection.insert(data)
+        data.update(result)
+
+        return self._data_to_user_model(data)
     
+    def _data_to_user_model(self, data: dict) -> User:
+        if not data:
+            return None
+        
+        return User(
+            user_key=data["_key"],
+            username=data["username"],
+            password=data["hashed_password"],
+            created_at=data["created_at"],
+            role=data["role"]
+        )
