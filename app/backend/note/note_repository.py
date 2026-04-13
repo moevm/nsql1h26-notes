@@ -1,4 +1,3 @@
-from typing import Optional, List
 from datetime import datetime, timezone
 from arango.database import StandardDatabase
 
@@ -11,21 +10,17 @@ class NoteRepository:
 
     def create(self, data: dict) -> dict:
         note = {
-            "title": data.get("title"),
-            "content": data.get("content"),
+            **data,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
-            "parent_key": data.get("parent_key"),
-            "user_ref": data.get("user_ref"),
-            "tags": data.get("tags", [])
         }
 
         result = self.collection.insert(note)
         note.update(result)
 
-        return self._data_to_note_model(note)
+        return note
 
-    def get(self, note_key: str) -> Optional[dict]:
+    def get(self, note_key: str) -> dict | None:
         query = """
         FOR n IN notes
             FILTER n._key == @key
@@ -38,14 +33,10 @@ class NoteRepository:
             bind_vars={"key": note_key}
         )
 
-        return self._data_to_note_model(next(cursor, None))
+        return next(cursor, None)
 
-    def update(self, note_key: str, data: dict) -> Optional[dict]:
-        note = self.get(note_key)
-        if not note:
-            return None
-
-        update_query = """
+    def update(self, note_key: str, data: dict) -> dict | None:
+        query = """
         FOR n IN notes
             FILTER n._key == @key
             UPDATE n WITH @data IN notes
@@ -53,7 +44,7 @@ class NoteRepository:
         """
 
         cursor = self.db.aql.execute(
-            update_query,
+            query,
             bind_vars={
                 "key": note_key,
                 "data": {
@@ -63,7 +54,7 @@ class NoteRepository:
             }
         )
 
-        return self._data_to_note_model(next(cursor, None))
+        return next(cursor, None)
 
     def delete(self, note_key: str) -> bool:
         query = """
@@ -80,7 +71,7 @@ class NoteRepository:
 
         return next(cursor, None) is not None
 
-    def get_by_user(self, user_ref: str) -> List[dict]:
+    def get_by_user(self, user_ref: str) -> list[dict]:
         query = """
         FOR n IN notes
             FILTER n.user_ref == @user_ref
@@ -92,19 +83,4 @@ class NoteRepository:
             bind_vars={"user_ref": user_ref}
         )
 
-        return [self._data_to_note_model(doc) for doc in cursor]
-
-    def _data_to_note_model(self, data: dict | None):
-        if not data:
-            return None
-
-        return {
-            "note_key": data["_key"],
-            "title": data["title"],
-            "content": data["content"],
-            "created_at": data["created_at"],
-            "updated_at": data["updated_at"],
-            "parent_key": data.get("parent_key"),
-            "user_ref": data.get("user_ref"),
-            "tags": data.get("tags", [])
-        }
+        return list(cursor)
