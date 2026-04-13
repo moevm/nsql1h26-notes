@@ -1,13 +1,16 @@
 from arango import ArangoClient
 import os
+from core.config import get_settings
+
+settings = get_settings()
 
 client = ArangoClient(
-    hosts=f"http://{os.getenv('ARANGO_HOST')}:{os.getenv('ARANGO_PORT')}"
+    hosts=settings.database_url
 )
 db = client.db(
-    os.getenv("ARANGO_DB"),
-    username=os.getenv("ARANGO_USER"),
-    password=os.getenv("ARANGO_PASSWORD")
+    settings.ARANGO_DB,
+    username=settings.ARANGO_USER,
+    password=settings.ARANGO_PASSWORD
 )
 
 
