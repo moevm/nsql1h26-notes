@@ -10,8 +10,8 @@ from core.security import decode_token
 security = HTTPBearer()
 
 
-def get_auth_service() -> AuthService:
-    return AuthService(get_user_service())
+def get_auth_service(user_service: UserService = Depends(get_user_service)) -> AuthService:
+    return AuthService(user_service)
 
 
 def get_token_payload(

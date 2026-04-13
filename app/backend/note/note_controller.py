@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 
 from auth.auth_dependencies import get_current_user_key
+from note.note_schemas import NoteRequest
 from note.note_service import NoteService
 from note.note_dependencies import get_note_service
 
@@ -10,11 +11,11 @@ router = APIRouter(prefix="/api/notes", tags=["Notes"])
 
 @router.post("")
 def create_note(
-    data: dict,
+    note: NoteRequest,
     user_key: str = Depends(get_current_user_key),
     service: NoteService = Depends(get_note_service)
 ):
-    return service.create_note(user_key, data)
+    return service.create_note(user_key, note)
 
 @router.get("/{note_key}")
 def get_note(
