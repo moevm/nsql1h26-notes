@@ -1,5 +1,5 @@
 from user.user_service import UserService
-from core.security import hash_password, verify_password, create_tokens
+from core.security import hash_password, verify_password, create_tokens, pwd_context
 
 
 class AuthService:
@@ -15,9 +15,7 @@ class AuthService:
         
         if not self._validate_password(password, confirm_password):
             raise Exception("Passswords do not match")
-        
-        hashed = hash_password(password)
-        user = self.user_service.create_user(username, hashed)
+        user = self.user_service.create_user(username, password)
 
         return create_tokens(user.user_key)
     
@@ -26,7 +24,6 @@ class AuthService:
 
         if not user:
             raise Exception("Invalid user")
-        
         if not verify_password(password, user.password):
             raise Exception("Invalid password")
         

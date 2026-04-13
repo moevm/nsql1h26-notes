@@ -42,10 +42,10 @@ class UserRepository:
         
         return self._data_to_user_model(next(cursor, None))
     
-    def create(self, username: str, password: str) -> User:
+    def create(self, username: str, hashed_password: str) -> User:
         data = {
             "username": username,
-            "hashed_password": hash_password(password),
+            "hashed_password": hashed_password,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "role": "User"
         }
@@ -55,7 +55,7 @@ class UserRepository:
 
         return self._data_to_user_model(data)
     
-    def _data_to_user_model(self, data: dict) -> User:
+    def _data_to_user_model(self, data: dict) -> User | None:
         if not data:
             return None
         
