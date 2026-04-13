@@ -53,7 +53,9 @@ class NoteService:
         return self._to_response(note)
 
     def delete_note(self, note_key: str):
-        return self.repo.delete(note_key)
+        ok = self.repo.delete(note_key)
+        if not ok:
+            raise ValueError("Note not found")
 
     def get_user_notes(self, user_ref: str):
         notes = self.repo.get_by_user(user_ref)

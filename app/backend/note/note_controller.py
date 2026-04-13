@@ -54,9 +54,9 @@ def patch_note(
     return service.patch_note(note_key, data)
 
 
-@router.delete("/{note_key}", response_model=NoteResponse)
+@router.delete("/{note_key}")
 def delete_note(
         note_key: str,
         service: NoteService = Depends(get_note_service)
-) -> NoteResponse:
-    return service.delete_note(note_key)
+):
+    service.delete_note(note_key)
