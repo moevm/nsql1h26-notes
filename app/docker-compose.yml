@@ -27,8 +27,28 @@ services:
       - db
     restart: unless-stopped
 
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      target: dev
+    container_name: client
+    ports:
+      - "127.0.0.1:5173:5173"
+    env_file:
+      - .env
+    volumes:
+      - ./client:/app
+      - client_node_modules:/app/node_modules
+    networks:
+      - backend_network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
 volumes:
   arangodb_data:
+  client_node_modules:
 
 networks:
   backend_network:
