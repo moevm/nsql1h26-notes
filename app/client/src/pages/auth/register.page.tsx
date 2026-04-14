@@ -27,12 +27,12 @@ export const RegisterPage = () => {
         <div className="mx-auto flex min-h-screen max-w-md items-center px-6">
             <form className="w-full space-y-4 rounded-md border p-6" onSubmit={onSubmit}>
                 <h1 className="text-2xl font-semibold">Регистрация</h1>
-                <input className="w-full rounded-md border px-3 py-2" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" />
-                <input className="w-full rounded-md border px-3 py-2" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" />
-                <input className="w-full rounded-md border px-3 py-2" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" type="password" />
+                <input className="w-full rounded-md border px-3 py-2" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Имя пользователя" />
+                <input className="w-full rounded-md border px-3 py-2" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" type="password" />
+                <input className="w-full rounded-md border px-3 py-2" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Подтвердите пароль" type="password" />
                 {error ? <p className="text-sm text-red-500">{error}</p> : null}
                 <button className="rounded-md border px-4 py-2" type="submit" disabled={loading}>
-                    {loading ? "..." : "Create account"}
+                    {loading ? "..." : "Создать аккаунт"}
                 </button>
             </form>
         </div>

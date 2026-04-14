@@ -32,15 +32,15 @@ export const LoginPage = () => {
         <div className="mx-auto flex min-h-screen max-w-md items-center px-6">
             <form className="w-full space-y-4 rounded-md border p-6" onSubmit={onSubmit}>
                 <h1 className="text-2xl font-semibold">Вход</h1>
-                <input className="w-full rounded-md border px-3 py-2" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" />
-                <input className="w-full rounded-md border px-3 py-2" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" />
+                <input className="w-full rounded-md border px-3 py-2" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Имя пользователя" />
+                <input className="w-full rounded-md border px-3 py-2" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" type="password" />
                 {error ? <p className="text-sm text-red-500">{error}</p> : null}
                 <div className="flex gap-3">
                     <button className="rounded-md border px-4 py-2" type="submit" disabled={loading}>
-                        {loading ? "..." : "Login"}
+                        {loading ? "..." : "Войти"}
                     </button>
                     <button className="rounded-md border px-4 py-2" type="button" onClick={() => navigate("/auth/signup")}>
-                        Register
+                        Регистрация
                     </button>
                 </div>
             </form>

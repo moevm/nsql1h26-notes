@@ -17,7 +17,7 @@ export const Header: FC<HeaderProps> = ({ title, buttons, className }) => {
     return (
         <header
             className={cn(
-                "flex h-14 items-center justify-between border-b border-border bg-background/95 px-6 backdrop-blur",
+                "flex h-14 items-center justify-between border-b border-black/5 bg-white/90 px-6 text-foreground backdrop-blur",
                 className,
             )}
         >

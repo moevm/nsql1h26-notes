@@ -102,7 +102,7 @@ function NoteTreeBranch({ nodes, activeNoteKey, onOpenNote, onContextMenu }: Not
             </button>
 
             {hasChildren ? (
-              <div className="ml-4 border-l border-border/70 pl-3">
+              <div className="ml-4 pl-3">
                 <NoteTreeBranch
                   nodes={node.children}
                   activeNoteKey={activeNoteKey}
@@ -255,7 +255,7 @@ export const NotePageLayout = () => {
 
   return (
     <NoteLayoutProvider value={{ refreshNotes }}>
-      <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+      <div className="flex h-screen flex-col overflow-hidden bg-[#fafafa] text-foreground">
         <Header
           title={activeNode?.title ? `Заметки / ${activeNode.title}` : "Заметки"}
           buttons={[
@@ -268,12 +268,12 @@ export const NotePageLayout = () => {
         />
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="flex w-[380px] shrink-0 flex-col border-r border-border bg-muted/15">
-            <div className="border-b border-border px-4 py-4">
+          <aside className="flex w-[380px] shrink-0 flex-col bg-white">
+            <div className="px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                    Notes
+                    Заметки
                   </p>
                   <h1 className="truncate text-lg font-semibold">Структура</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -307,7 +307,7 @@ export const NotePageLayout = () => {
                   <div className="ml-8 h-9 animate-pulse rounded-md bg-muted/70" />
                 </div>
               ) : error ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
                   {error}
                 </div>
               ) : tree.length ? (
@@ -318,7 +318,7 @@ export const NotePageLayout = () => {
                   onContextMenu={openContextMenu}
                 />
               ) : (
-                <div className="rounded-md border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
+                <div className="rounded-md border border-dashed border-black/10 p-4 text-sm text-muted-foreground">
                   Ничего не найдено
                 </div>
               )}
@@ -332,7 +332,7 @@ export const NotePageLayout = () => {
 
         {contextMenu ? (
           <div
-            className="fixed z-50 w-56 rounded-md border border-border bg-background p-1 shadow-lg"
+            className="fixed z-50 w-56 rounded-md border border-black/10 bg-white p-1 shadow-lg"
             style={{ top: contextMenu.top, left: contextMenu.left }}
             onClick={(event) => event.stopPropagation()}
           >
@@ -356,7 +356,7 @@ export const NotePageLayout = () => {
         ) : null}
 
         {loading && notes.length ? (
-          <div className="pointer-events-none fixed bottom-4 left-[400px] flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs text-muted-foreground shadow-sm">
+          <div className="pointer-events-none fixed bottom-4 left-[400px] flex items-center gap-2 rounded-md border border-black/10 bg-white px-3 py-2 text-xs text-muted-foreground shadow-sm">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             Обновление...
           </div>
