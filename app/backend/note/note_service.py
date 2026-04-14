@@ -1,3 +1,5 @@
+from typing import List
+
 from note.note_repository import NoteRepository
 from note.note_schemas import NoteCreate, NoteResponse, NotePut, NotePatch, NoteFilter
 
@@ -19,14 +21,14 @@ class NoteService:
             user_ref=note["user_ref"],
         )
 
-    def create_note(self, user_ref: str, data: NoteCreate):
+    def create_note(self, user_ref: str, data: NoteCreate) -> NoteResponse:
         note = self.repo.create({
             **data.model_dump(),
             "user_ref": user_ref
         })
         return self._to_response(note)
 
-    def get_note(self, user_ref: str, note_key: str):
+    def get_note(self, user_ref: str, note_key: str) -> NoteResponse:
         note = self.repo.get(note_key)
 
         if not note:
@@ -37,7 +39,7 @@ class NoteService:
 
         return self._to_response(note)
 
-    def patch_note(self, note_key: str, data: NotePatch):
+    def patch_note(self, note_key: str, data: NotePatch) -> NoteResponse:
         payload = data.model_dump(exclude_unset=True)
 
         note = self.repo.update(note_key, payload)
@@ -46,17 +48,17 @@ class NoteService:
 
         return self._to_response(note)
 
-    def replace_note(self, note_key: str, data: NotePut):
+    def replace_note(self, note_key: str, data: NotePut) -> NoteResponse:
         note = self.repo.update(note_key, data.model_dump())
         if not note:
             raise ValueError("Note not found")
         return self._to_response(note)
 
-    def delete_note(self, note_key: str):
+    def delete_note(self, note_key: str) -> None:
         ok = self.repo.delete(note_key)
         if not ok:
             raise ValueError("Note not found")
 
-    def get_user_notes(self, user_ref: str, filters: NoteFilter):
+    def get_user_notes(self, user_ref: str, filters: NoteFilter) -> List[NoteResponse]:
         notes = self.repo.get_by_user(user_ref, filters)
         return [self._to_response(n) for n in notes]
