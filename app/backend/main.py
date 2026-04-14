@@ -1,11 +1,22 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from auth import auth_controller
+from db.database import ensure_db
 from user import user_controller
 from note import note_controller
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("LIFESPAN START")
+    ensure_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
 
 app.include_router(auth_controller.router)
 app.include_router(user_controller.router)
