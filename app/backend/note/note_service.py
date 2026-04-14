@@ -1,5 +1,7 @@
 from typing import List
 
+from fastapi import HTTPException
+
 from note.note_repository import NoteRepository
 from note.note_schemas import NoteCreate, NoteResponse, NotePut, NotePatch, NoteFilter
 
@@ -32,10 +34,10 @@ class NoteService:
         note = self.repo.get(note_key)
 
         if not note:
-            raise Exception("Note not found")
+            raise HTTPException(404, "Note not found")
 
         if note["user_ref"] != user_ref:
-            raise Exception("Access denied")
+            raise HTTPException(403, "Access denied")
 
         return self._to_response(note)
 
@@ -44,20 +46,20 @@ class NoteService:
 
         note = self.repo.update(note_key, payload)
         if not note:
-            raise ValueError("Note not found")
+            raise HTTPException(404, "Note not found")
 
         return self._to_response(note)
 
     def replace_note(self, note_key: str, data: NotePut) -> NoteResponse:
         note = self.repo.update(note_key, data.model_dump())
         if not note:
-            raise ValueError("Note not found")
+            raise HTTPException(404, "Note not found")
         return self._to_response(note)
 
     def delete_note(self, note_key: str) -> None:
         ok = self.repo.delete(note_key)
         if not ok:
-            raise ValueError("Note not found")
+            raise HTTPException(404, "Note not found")
 
     def get_user_notes(self, user_ref: str, filters: NoteFilter) -> List[NoteResponse]:
         notes = self.repo.get_by_user(user_ref, filters)
