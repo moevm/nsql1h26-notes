@@ -1,8 +1,8 @@
-import axios, { type AxiosResponse } from "axios";
+import { type AxiosResponse } from "axios";
 
 import type { LoginRequest, RegisterRequest } from "@/entities/user/types/requests";
 import type { UserAuthResponse } from "@/entities/user/types/responses";
-import { http, requestWithToken } from "@/shared/api/http";
+import { http } from "@/shared/api/http";
 
 class AuthProxy {
 
@@ -28,12 +28,14 @@ class AuthProxy {
 
     public refresh = async  (token: string): Promise<UserAuthResponse | null>  => {
         try {
-            const response: AxiosResponse<UserAuthResponse> = await requestWithToken<UserAuthResponse>(
+            const response: AxiosResponse<UserAuthResponse> = await http.post<UserAuthResponse>(
+                `${this.BASE_URL}/refresh`,
+                undefined,
                 {
-                    url: `${this.BASE_URL}/refresh`,
-                    method: "POST",
-                },
-                token
+                    headers: {
+                        Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
+                    },
+                }
             )
             return response.data
         } catch (e) {
