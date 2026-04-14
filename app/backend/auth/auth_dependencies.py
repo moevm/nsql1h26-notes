@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from auth.auth_service import AuthService
+from auth.token_service import TokenService
 from user.user_service import UserService
 from user.user_dependencies import get_user_service
 from core.security import decode_token
@@ -12,6 +13,9 @@ security = HTTPBearer()
 
 def get_auth_service(user_service: UserService = Depends(get_user_service)) -> AuthService:
     return AuthService(user_service)
+
+def get_token_service() -> TokenService:
+    return TokenService()
 
 
 def get_token_payload(
