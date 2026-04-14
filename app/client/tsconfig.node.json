@@ -16,6 +16,7 @@
     "tailwind.config.ts",
     "postcss.config.cjs",
     "components.json",
-    "tailwindcss-animate.d.ts"
+    "tailwindcss-animate.d.ts",
+    "vite-node-globals.d.ts"
   ]
 }
