@@ -4,7 +4,9 @@ from fastapi import HTTPException
 from passlib.context import CryptContext
 import uuid
 
-from core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
+from core.config import get_settings
+
+settings = get_settings()
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -22,8 +24,8 @@ def decode_token(token: str) -> dict:
     try:
         payload = jwt.decode(
             token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM]
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
         )
         return payload
     except JWTError:
@@ -31,7 +33,7 @@ def decode_token(token: str) -> dict:
 
 
 def create_token(payload: dict) -> str:
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def create_access_token(user_key: str):
@@ -40,7 +42,7 @@ def create_access_token(user_key: str):
         "type": "access",
         "jti": str(uuid.uuid4()),
         "exp": datetime.now(timezone.utc) + 
-            timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     }
     return create_token(payload)
 
@@ -51,7 +53,7 @@ def create_refresh_token(user_key: str):
         "type": "refresh",
         "jti": str(uuid.uuid4()),
         "exp": datetime.now(timezone.utc) + 
-            timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+            timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     }
     return create_token(payload)
 

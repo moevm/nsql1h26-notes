@@ -1,43 +1,66 @@
+from typing import List
+
+from fastapi import HTTPException
+
 from note.note_repository import NoteRepository
+from note.note_schemas import NoteCreate, NoteResponse, NotePut, NotePatch, NoteFilter
 
 
 class NoteService:
 
-    def __init__(self, note_repo: NoteRepository):
-        self.note_repo = note_repo
-    
-    def create_note(self, user_ref: str, data: dict):
-        note = self.note_repo.create(
-            {
-                **data,
-                "user_ref": user_ref
-            }
+    def __init__(self, repo: NoteRepository):
+        self.repo = repo
+
+    def _to_response(self, note: dict) -> NoteResponse:
+        return NoteResponse(
+            note_key=note["_key"],
+            title=note["title"],
+            content=note["content"],
+            parent_key=note.get("parent_key"),
+            tags=note.get("tags", []),
+            created_at=note["created_at"],
+            updated_at=note["updated_at"],
+            user_ref=note["user_ref"],
         )
 
-        return note
-    
-    def get_note(self, user_ref: str, note_key: str):
-        note = self.note_repo.get(note_key)
+    def create_note(self, user_ref: str, data: NoteCreate) -> NoteResponse:
+        note = self.repo.create({
+            **data.model_dump(),
+            "user_ref": user_ref
+        })
+        return self._to_response(note)
+
+    def get_note(self, user_ref: str, note_key: str) -> NoteResponse:
+        note = self.repo.get(note_key)
 
         if not note:
-            raise Exception("Note not found")
+            raise HTTPException(404, "Note not found")
 
         if note["user_ref"] != user_ref:
-            raise Exception("Access denied")
-        
-        return note
-    
-    def update_note(self, note_key: str, data: dict):
-        return self.note_repo.update(note_key, data)
-    
-    def delete_note(self, note_key: str):
-        self.note_repo.delete(note_key)
-    
-    def get_user_notes(self, user_ref: str):
-        return self.note_repo.get_by_user(user_ref)
-    
-    def move_note(self, note_key: str, data: dict):
-        self.note_repo.update(
-            note_key,
-            {"parent_key": data.get("parent_key")}
-        )
+            raise HTTPException(403, "Access denied")
+
+        return self._to_response(note)
+
+    def patch_note(self, note_key: str, data: NotePatch) -> NoteResponse:
+        payload = data.model_dump(exclude_unset=True)
+
+        note = self.repo.update(note_key, payload)
+        if not note:
+            raise HTTPException(404, "Note not found")
+
+        return self._to_response(note)
+
+    def replace_note(self, note_key: str, data: NotePut) -> NoteResponse:
+        note = self.repo.update(note_key, data.model_dump())
+        if not note:
+            raise HTTPException(404, "Note not found")
+        return self._to_response(note)
+
+    def delete_note(self, note_key: str) -> None:
+        ok = self.repo.delete(note_key)
+        if not ok:
+            raise HTTPException(404, "Note not found")
+
+    def get_user_notes(self, user_ref: str, filters: NoteFilter) -> List[NoteResponse]:
+        notes = self.repo.get_by_user(user_ref, filters)
+        return [self._to_response(n) for n in notes]
