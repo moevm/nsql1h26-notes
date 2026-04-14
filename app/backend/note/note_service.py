@@ -1,5 +1,5 @@
 from note.note_repository import NoteRepository
-from note.note_schemas import NoteCreate, NoteResponse, NotePut, NotePatch
+from note.note_schemas import NoteCreate, NoteResponse, NotePut, NotePatch, NoteFilter
 
 
 class NoteService:
@@ -57,6 +57,6 @@ class NoteService:
         if not ok:
             raise ValueError("Note not found")
 
-    def get_user_notes(self, user_ref: str):
-        notes = self.repo.get_by_user(user_ref)
+    def get_user_notes(self, user_ref: str, filters: NoteFilter):
+        notes = self.repo.get_by_user(user_ref, filters)
         return [self._to_response(n) for n in notes]

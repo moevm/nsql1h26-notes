@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 from arango.database import StandardDatabase
+from note.note_schemas import NoteFilter
+
 
 
 class NoteRepository:
@@ -71,16 +73,34 @@ class NoteRepository:
 
         return next(cursor, None) is not None
 
-    def get_by_user(self, user_ref: str) -> list[dict]:
-        query = """
+    def get_by_user(self, user_ref: str, filters: NoteFilter) -> list[dict]:
+        filters_list = ["n.user_ref == @user_ref"]
+        bind_vars = {
+            "user_ref": user_ref,
+            "limit": filters.limit,
+            "offset": filters.offset,
+        }
+
+        if filters.parent_key is not None:
+            filters_list.append("n.parent_key == @parent_key")
+            bind_vars["parent_key"] = filters.parent_key
+
+        if filters.tag is not None:
+            filters_list.append("@tag IN n.tags")
+            bind_vars["tag"] = filters.tag
+
+        if filters.search is not None:
+            filters_list.append(
+                "CONTAINS(LOWER(n.title), LOWER(@search)) OR CONTAINS(LOWER(n.content), LOWER(@search))"
+            )
+            bind_vars["search"] = filters.search
+
+        query = f"""
         FOR n IN notes
-            FILTER n.user_ref == @user_ref
+            FILTER {" AND ".join(filters_list)}
+            LIMIT @offset, @limit
             RETURN n
         """
 
-        cursor = self.db.aql.execute(
-            query,
-            bind_vars={"user_ref": user_ref}
-        )
-
+        cursor = self.db.aql.execute(query, bind_vars=bind_vars)
         return list(cursor)

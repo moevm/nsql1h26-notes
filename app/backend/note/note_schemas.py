@@ -18,14 +18,25 @@ class NotePut(BaseModel):
     parent_key: str | None
     tags: list[str]
 
+
 class NotePatch(BaseModel):
     title: str | None = None
     content: str | None = None
     parent_key: str | None = None
     tags: list[str] | None = None
 
+
 class NoteResponse(NoteBase):
     note_key: str
     user_ref: str
     created_at: str
     updated_at: str
+
+
+class NoteFilter(BaseModel):
+    parent_key: str | None = None
+    tag: str | None = None
+    search: str | None = None
+
+    limit: int = Field(default=50, ge=1, le=256)
+    offset: int = Field(default=0, ge=0)
