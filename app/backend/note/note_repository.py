@@ -84,6 +84,8 @@ class NoteRepository:
         if filters.parent_key is not None:
             filters_list.append("n.parent_key == @parent_key")
             bind_vars["parent_key"] = filters.parent_key
+        else:
+            filters_list.append("n.parent_key == null")
 
         if filters.tag is not None:
             filters_list.append("@tag IN n.tags")

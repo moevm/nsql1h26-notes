@@ -36,9 +36,11 @@ def create_token(payload: dict) -> str:
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def create_access_token(user_key: str):
+def create_access_token(user_key: str, username: str, role: str):
     payload = {
         "sub": user_key,
+        "username": username,
+        "role": role,
         "type": "access",
         "jti": str(uuid.uuid4()),
         "exp": datetime.now(timezone.utc) + 
@@ -56,10 +58,3 @@ def create_refresh_token(user_key: str):
             timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     }
     return create_token(payload)
-
-
-def create_tokens(user_key: str):
-    access_token = create_access_token(user_key)
-    refresh_token = create_refresh_token(user_key)
-
-    return access_token, refresh_token
