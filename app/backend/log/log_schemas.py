@@ -6,7 +6,7 @@ class LogBase(BaseModel):
     
 
 class RegistrationLogBase(LogBase):
-    user_ref: str
+    user_key: str
 
 class RegistationLogCreate(RegistrationLogBase):
     pass
