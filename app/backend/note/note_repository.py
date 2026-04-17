@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from arango.database import StandardDatabase
 from note.note_schemas import NoteFilter
-
+from utils.datetime_utils import now_iso
 
 
 class NoteRepository:
@@ -13,8 +13,8 @@ class NoteRepository:
     def create(self, data: dict) -> dict:
         note = {
             **data,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": now_iso(),
+            "updated_at": now_iso(),
         }
 
         result = self.collection.insert(note)
@@ -51,7 +51,7 @@ class NoteRepository:
                 "key": note_key,
                 "data": {
                     **data,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
+                    "updated_at": now_iso()
                 }
             }
         )
@@ -90,6 +90,21 @@ class NoteRepository:
         if filters.tag is not None:
             filters_list.append("@tag IN n.tags")
             bind_vars["tag"] = filters.tag
+        if filters.created_from is not None:
+            filters_list.append("n.created_at >= @created_from")
+            bind_vars["created_from"] = filters.created_from
+
+        if filters.created_to is not None:
+            filters_list.append("n.created_at <= @created_to")
+            bind_vars["created_to"] = filters.created_to
+
+        if filters.updated_from is not None:
+            filters_list.append("n.updated_at >= @updated_from")
+            bind_vars["updated_from"] = filters.updated_from
+
+        if filters.updated_to is not None:
+            filters_list.append("n.updated_at <= @updated_to")
+            bind_vars["updated_to"] = filters.updated_to
 
         if filters.search is not None:
             filters_list.append(

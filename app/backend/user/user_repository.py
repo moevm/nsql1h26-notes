@@ -4,6 +4,7 @@ from arango.database import StandardDatabase
 
 from model.user import User
 from core.security import hash_password
+from utils.datetime_utils import now_iso
 
 
 class UserRepository:
@@ -46,7 +47,7 @@ class UserRepository:
         data = {
             "username": username,
             "hashed_password": hashed_password,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": now_iso(),
             "role": "User"
         }
 
