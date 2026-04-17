@@ -49,3 +49,33 @@ class LogRepository:
         )
 
         return next(cursor, None) is not None
+    
+    def get_by_user(self, user_key: str) -> List[dict]:
+        query = """
+        FOR n IN logs
+            FILTER n.granted_by_key == @user_key
+                OR n.granted_to_key == @user_key
+                OR n.user_key == @user_key
+            RETURN n
+        """
+
+        cursor = self.db.aql.execute(
+            query,
+            bind_vars={"user_key": user_key}
+        )
+
+        return list(cursor)
+    
+    def get_by_note(self, note_key: str) -> List[dict]:
+        query = """
+        FOR n IN logs
+            FILTER n.note_key == @note_key
+            RETURN n
+        """
+
+        cursor = self.db.aql.execute(
+            query,
+            bind_vars={"note_key": note_key}
+        )
+
+        return list(cursor)
