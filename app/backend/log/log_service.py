@@ -8,7 +8,7 @@ from log.log_schemas import (
     NotesLogCreate,
     NotesLogResponse,
     PermissionLogCreate,
-    PermissionLogResponse, LogType, LogResponse, RegistrationAction
+    PermissionLogResponse, LogType, LogResponse, RegistrationAction, LogFilter
 )
 
 
@@ -100,6 +100,6 @@ class LogService:
 
         return self._to_permission_response(log)
 
-    def get_user_logs(self, user_key: str) -> List[LogResponse]:
-        raw_logs = self.repo.get_by_user(user_key)
+    def get_user_logs(self, user_key: str, filters: LogFilter) -> List[LogResponse]:
+        raw_logs = self.repo.get_by_user(user_key, filters)
         return [self._to_response(log) for log in raw_logs]
