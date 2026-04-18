@@ -6,6 +6,7 @@ from auth import auth_controller
 from db.database import ensure_db
 from user import user_controller
 from note import note_controller
+from log import log_controller
 
 
 @asynccontextmanager
@@ -21,3 +22,4 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(auth_controller.router)
 app.include_router(user_controller.router)
 app.include_router(note_controller.router)
+app.include_router(log_controller.router)

@@ -14,7 +14,8 @@ class NoteService:
         self.repo = repo
         self.log_service = log_service
 
-    def _to_response(self, note: dict) -> NoteResponse:
+    @staticmethod
+    def _to_response(note: dict) -> NoteResponse:
         return NoteResponse(
             note_key=note["_key"],
             title=note["title"],
@@ -95,11 +96,11 @@ class NoteService:
                 raise HTTPException(404, "Note not found")
 
             self._validate_parent(payload["parent_key"], note["user_ref"], note_key)
-        
+
         note = self.repo.update(note_key, payload)
         if not note:
             raise HTTPException(404, "Note not found")
-        
+
         response_note = self._to_response(note)
 
         self.log_service.create_note_log(

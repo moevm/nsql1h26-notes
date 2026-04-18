@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+
 from core.security import hash_password
 from user.user_repository import UserRepository
 
@@ -20,3 +22,11 @@ class UserService:
     def update_user(self, user_key: str, data: dict):
         user = self.user_repo.update(user_key, data)
         return user
+
+    def get_user_key_by_username(self, username: str):
+        user = self.user_repo.get_by_username(username)
+
+        if not user:
+            raise HTTPException(404, "User not found")
+
+        return user.user_key

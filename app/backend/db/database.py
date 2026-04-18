@@ -10,7 +10,7 @@ settings = get_settings()
 client = ArangoClient(hosts=settings.database_url)
 db: StandardDatabase | None = None
 
-COLLECTIONS: tuple[str, ...] = ("users", "notes")
+COLLECTIONS: tuple[str, ...] = ("users", "notes","logs")
 MAX_INIT_ATTEMPTS = 30
 RETRY_DELAY_SECONDS = 2.0
 
