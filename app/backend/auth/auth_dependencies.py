@@ -5,14 +5,19 @@ from auth.auth_service import AuthService
 from auth.token_service import TokenService
 from user.user_service import UserService
 from user.user_dependencies import get_user_service
+from log.log_service import LogService
+from log.log_dependencies import get_log_service
 from core.security import decode_token
 
 
 security = HTTPBearer()
 
 
-def get_auth_service(user_service: UserService = Depends(get_user_service)) -> AuthService:
-    return AuthService(user_service)
+def get_auth_service(
+        user_service: UserService = Depends(get_user_service),
+        log_service: LogService = Depends(get_log_service)
+    ) -> AuthService:
+    return AuthService(user_service, log_service)
 
 def get_token_service() -> TokenService:
     return TokenService()

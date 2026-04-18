@@ -4,14 +4,18 @@ from fastapi import HTTPException
 
 from note.note_repository import NoteRepository
 from note.note_schemas import NoteCreate, NoteResponse, NotePut, NotePatch, NoteFilter
+from log.log_service import LogService
+from log.log_schemas import NotesLogCreate, NoteAction, NoteSnapshot
 
 
 class NoteService:
 
-    def __init__(self, repo: NoteRepository):
+    def __init__(self, repo: NoteRepository, log_service: LogService):
         self.repo = repo
+        self.log_service = log_service
 
-    def _to_response(self, note: dict) -> NoteResponse:
+    @staticmethod
+    def _to_response(note: dict) -> NoteResponse:
         return NoteResponse(
             note_key=note["_key"],
             title=note["title"],
@@ -22,6 +26,23 @@ class NoteService:
             updated_at=note["updated_at"],
             user_ref=note["user_ref"],
         )
+
+    @staticmethod
+    def _to_snapshot(note: dict) -> NoteSnapshot:
+        return NoteSnapshot(
+            title=note["title"],
+            content=note["content"],
+            parent_key=note.get("parent_key"),
+            tags=note.get("tags", []),
+        )
+
+    def _get_owned_note(self, note_key: str, user_ref: str) -> dict:
+        note = self.repo.get(note_key)
+        if not note:
+            raise HTTPException(404, "Note not found")
+        if note["user_ref"] != user_ref:
+            raise HTTPException(403, "Access denied")
+        return note
 
     def _check_cycle(self, parent_key: str, note_key: str):
         current = parent_key
@@ -57,49 +78,87 @@ class NoteService:
             **data.model_dump(),
             "user_ref": user_ref
         })
-        return self._to_response(note)
+
+        response_note = self._to_response(note)
+
+        self.log_service.create_note_log(
+            user_ref,
+            NotesLogCreate(
+                action=NoteAction.CREATE,
+                note_key=response_note.note_key,
+                state_before=NoteSnapshot(
+                    title="",
+                    content="",
+                    parent_key=None,
+                    tags=[]
+                ),
+                state_after=self._to_snapshot(note),
+                diff=""
+            )
+        )
+
+        return response_note
 
     def get_note(self, user_ref: str, note_key: str) -> NoteResponse:
-        note = self.repo.get(note_key)
-
-        if not note:
-            raise HTTPException(404, "Note not found")
-
-        if note["user_ref"] != user_ref:
-            raise HTTPException(403, "Access denied")
-
+        note = self._get_owned_note(note_key, user_ref)
         return self._to_response(note)
 
-    def patch_note(self, note_key: str, data: NotePatch) -> NoteResponse:
+    def patch_note(self, note_key: str, user_ref: str, data: NotePatch) -> NoteResponse:
+        note = self._get_owned_note(note_key, user_ref)
+        before = self._to_snapshot(note)
         payload = data.model_dump(exclude_unset=True)
         if "parent_key" in payload and payload["parent_key"] is not None:
-            note = self.repo.get(note_key)
-            if not note:
-                raise HTTPException(404, "Note not found")
-
-            self._validate_parent(payload["parent_key"], note["user_ref"], note_key)
-
-        note = self.repo.update(note_key, payload)
-        if not note:
+            self._validate_parent(payload["parent_key"], user_ref, note_key)
+        updated = self.repo.update(note_key, payload)
+        if not updated:
             raise HTTPException(404, "Note not found")
+        after = self._to_snapshot(updated)
+        self.log_service.create_note_log(
+            user_ref,
+            NotesLogCreate(
+                action=NoteAction.UPDATE,
+                note_key=note_key,
+                state_before=before,
+                state_after=after,
+                diff=""
+            )
+        )
+        return self._to_response(updated)
 
-        return self._to_response(note)
-
-    def replace_note(self, note_key: str, data: NotePut) -> NoteResponse:
-        note = self.repo.get(note_key)
-        if not note:
-            raise HTTPException(404, "Note not found")
-
+    def replace_note(self, note_key: str, user_ref: str, data: NotePut) -> NoteResponse:
+        note = self._get_owned_note(note_key, user_ref)
+        before = self._to_snapshot(note)
         if data.parent_key is not None:
-            self._validate_parent(data.parent_key, note["user_ref"], note_key)
-
+            self._validate_parent(data.parent_key, user_ref, note_key)
         updated = self.repo.update(note_key, data.model_dump())
         if not updated:
             raise HTTPException(404, "Note not found")
-
+        after = self._to_snapshot(updated)
+        self.log_service.create_note_log(
+            user_ref,
+            NotesLogCreate(
+                action=NoteAction.UPDATE,
+                note_key=note_key,
+                state_before=before,
+                state_after=after,
+                diff=""
+            )
+        )
         return self._to_response(updated)
 
-    def delete_note(self, note_key: str) -> None:
+    def delete_note(self, note_key: str, user_ref: str) -> None:
+        note = self._get_owned_note(note_key, user_ref)
+        before = self._to_snapshot(note)
+        self.log_service.create_note_log(
+            user_ref,
+            NotesLogCreate(
+                action=NoteAction.DELETE,
+                note_key=note_key,
+                state_before=before.model_dump(),
+                state_after=NoteSnapshot(title="", content="", parent_key=None, tags=[]),
+                diff=""
+            )
+        )
         ok = self.repo.delete(note_key)
         if not ok:
             raise HTTPException(404, "Note not found")
