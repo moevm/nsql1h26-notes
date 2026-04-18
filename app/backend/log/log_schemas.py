@@ -6,20 +6,19 @@ class LogBase(BaseModel):
     
 
 class RegistrationLogBase(LogBase):
-    user_key: str
+    pass
 
 class RegistationLogCreate(RegistrationLogBase):
     pass
 
 class RegistrationLogResponse(RegistrationLogBase):
     log_key: str
+    user_key: str
     created_at: str
 
 
 class PermissionLogBase(LogBase):
     note_key: str
-    granted_by_key: str
-    granted_to_key: str
     before_permission_type: str
     after_permission_type: str
 
@@ -28,12 +27,13 @@ class PermissionLogCreate(PermissionLogBase):
 
 class PermissionLogResponse(PermissionLogBase):
     log_key: str
+    granted_by_key: str
+    granted_to_key: str
     created_at: str
 
 
 class NotesLogBase(LogBase):
     note_key: str
-    user_key: str
     state_before: str
     state_after: str
     diff: str
@@ -43,4 +43,5 @@ class NotesLogCreate(NotesLogBase):
 
 class NotesLogResponse(NotesLogBase):
     log_key: str
+    user_key: str
     created_at: str
