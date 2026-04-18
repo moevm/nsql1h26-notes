@@ -13,7 +13,7 @@ from log.log_schemas import (
 )
 
 
-class Service:
+class LogService:
 
     def __init__(self, repo: LogRepository, user_service: UserService):
         self.repo = repo
@@ -81,7 +81,7 @@ class Service:
         })
         return self._to_note_response(log)
     
-    def create_permission_response(
+    def create_permission_log(
             self,
             granted_by_ref: str,
             granted_to_username: str,
@@ -97,11 +97,10 @@ class Service:
 
         return self._to_permission_response(log)
     
-    def get_notes_by_username(
+    def get_user_logs(
             self,
-            username: str
+            user_key: str
     ) -> List[NotesLogResponse | RegistrationLogResponse | PermissionLogResponse]:
-        user_key = self._get_user_key_by_username(username)
         raw_logs = self.repo.get_by_user(user_key)
         res_logs = []
 
