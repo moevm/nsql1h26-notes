@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from note.note_repository import NoteRepository
 from note.note_schemas import NoteCreate, NoteResponse, NotePut, NotePatch, NoteFilter
 from log.log_service import LogService
-from log.log_schemas import NotesLogCreate
+from log.log_schemas import NotesLogCreate, NoteAction
 
 
 class NoteService:
@@ -67,7 +67,7 @@ class NoteService:
         self.log_service.create_note_log(
             user_ref,
             NotesLogCreate(
-                action="note create",
+                action=NoteAction.CREATE,
                 note_key=response_note.note_key,
                 state_before="",
                 state_after="",
@@ -106,7 +106,7 @@ class NoteService:
         self.log_service.create_note_log(
             response_note.user_ref,
             NotesLogCreate(
-                action="note update",
+                action=NoteAction.UPDATE,
                 note_key=note_key,
                 state_before="",
                 state_after="",
@@ -133,7 +133,7 @@ class NoteService:
         self.log_service.create_note_log(
             response_note.user_ref,
             NotesLogCreate(
-                action="note replace",
+                action=NoteAction.UPDATE,
                 note_key=note_key,
                 state_before="",
                 state_after="",

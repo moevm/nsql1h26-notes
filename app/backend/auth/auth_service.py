@@ -21,7 +21,7 @@ class AuthService:
         user = self.user_service.create_user(username, password)
         self.log_service.create_registration_log(
             user.user_key,
-            RegistrationLogCreate(action="register")
+            RegistrationLogCreate()
         )
 
         return user
