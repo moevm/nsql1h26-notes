@@ -4,12 +4,15 @@ from fastapi import HTTPException
 
 from note.note_repository import NoteRepository
 from note.note_schemas import NoteCreate, NoteResponse, NotePut, NotePatch, NoteFilter
+from log.log_service import LogService
+from log.log_schemas import NotesLogCreate
 
 
 class NoteService:
 
-    def __init__(self, repo: NoteRepository):
+    def __init__(self, repo: NoteRepository, log_service: LogService):
         self.repo = repo
+        self.log_service = log_service
 
     def _to_response(self, note: dict) -> NoteResponse:
         return NoteResponse(
@@ -57,7 +60,21 @@ class NoteService:
             **data.model_dump(),
             "user_ref": user_ref
         })
-        return self._to_response(note)
+
+        response_note = self._to_response(note)
+
+        self.log_service.create_note_log(
+            user_ref,
+            NotesLogCreate(
+                action="note create",
+                note_key=response_note.note_key,
+                state_before="",
+                state_after="",
+                diff=""
+            )
+        )
+
+        return response_note
 
     def get_note(self, user_ref: str, note_key: str) -> NoteResponse:
         note = self.repo.get(note_key)
@@ -78,12 +95,25 @@ class NoteService:
                 raise HTTPException(404, "Note not found")
 
             self._validate_parent(payload["parent_key"], note["user_ref"], note_key)
-
+        
         note = self.repo.update(note_key, payload)
         if not note:
             raise HTTPException(404, "Note not found")
+        
+        response_note = self._to_response(note)
 
-        return self._to_response(note)
+        self.log_service.create_note_log(
+            response_note.user_ref,
+            NotesLogCreate(
+                action="note update",
+                note_key=note_key,
+                state_before="",
+                state_after="",
+                diff=""
+            )
+        )
+
+        return response_note
 
     def replace_note(self, note_key: str, data: NotePut) -> NoteResponse:
         note = self.repo.get(note_key)
@@ -97,7 +127,20 @@ class NoteService:
         if not updated:
             raise HTTPException(404, "Note not found")
 
-        return self._to_response(updated)
+        response_note = self._to_response(updated)
+
+        self.log_service.create_note_log(
+            response_note.user_ref,
+            NotesLogCreate(
+                action="note replace",
+                note_key=note_key,
+                state_before="",
+                state_after="",
+                diff=""
+            )
+        )
+
+        return response_note
 
     def delete_note(self, note_key: str) -> None:
         ok = self.repo.delete(note_key)

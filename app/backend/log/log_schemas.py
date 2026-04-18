@@ -8,7 +8,7 @@ class LogBase(BaseModel):
 class RegistrationLogBase(LogBase):
     pass
 
-class RegistationLogCreate(RegistrationLogBase):
+class RegistrationLogCreate(RegistrationLogBase):
     pass
 
 class RegistrationLogResponse(RegistrationLogBase):
