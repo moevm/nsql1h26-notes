@@ -32,7 +32,7 @@ def create_note(
 def get_note(
         note_key: str,
         user_ref: str = Depends(get_current_user_key),
-        service: NoteService = Depends(get_note_service)
+        service: NoteService = Depends(get_note_service),
 ) -> NoteResponse:
     return service.get_note(user_ref, note_key)
 
@@ -41,23 +41,26 @@ def get_note(
 def update_note(
         note_key: str,
         data: NotePut,
-        service: NoteService = Depends(get_note_service)
+        user_ref: str = Depends(get_current_user_key),
+        service: NoteService = Depends(get_note_service),
 ) -> NoteResponse:
-    return service.replace_note(note_key, data)
+    return service.replace_note(note_key, user_ref, data)
 
 
 @router.patch("/{note_key}", response_model=NoteResponse)
 def patch_note(
         note_key: str,
         data: NotePatch,
-        service: NoteService = Depends(get_note_service)
+        user_ref: str = Depends(get_current_user_key),
+        service: NoteService = Depends(get_note_service),
 ) -> NoteResponse:
-    return service.patch_note(note_key, data)
+    return service.patch_note(note_key,user_ref, data)
 
 
 @router.delete("/{note_key}", status_code=204)
 def delete_note(
         note_key: str,
+        user_ref: str = Depends(get_current_user_key),
         service: NoteService = Depends(get_note_service)
 ) -> None:
-    service.delete_note(note_key)
+    service.delete_note(note_key, user_ref)

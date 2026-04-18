@@ -3,7 +3,6 @@ from fastapi import HTTPException
 from core.security import verify_password
 from user.user_service import UserService
 from log.log_service import LogService
-from log.log_schemas import RegistrationLogCreate
 
 
 class AuthService:
@@ -21,7 +20,6 @@ class AuthService:
         user = self.user_service.create_user(username, password)
         self.log_service.create_registration_log(
             user.user_key,
-            RegistrationLogCreate()
         )
 
         return user

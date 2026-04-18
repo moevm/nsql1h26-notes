@@ -26,12 +26,18 @@ class PermissionAction(str, Enum):
     GRANT = "grant"
     REVOKE = "revoke"
 
+class NoteSnapshot(BaseModel):
+    title: str
+    content: str
+    parent_key: str | None
+    tags: list[str]
+
 
 class NotesLogCreate(BaseModel):
     action: NoteAction
     note_key: str
-    state_before: str
-    state_after: str
+    state_before: NoteSnapshot
+    state_after: NoteSnapshot
     diff: str
 
 
@@ -60,8 +66,8 @@ class NotesLogResponse(LogBase):
     type: Literal[LogType.NOTE]
     action: NoteAction
     note_key: str
-    state_before: str
-    state_after: str
+    state_before: NoteSnapshot
+    state_after: NoteSnapshot
     diff: str
     user_key: str
 
