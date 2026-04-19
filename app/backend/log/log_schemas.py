@@ -103,7 +103,7 @@ class LogFilter(BaseModel):
     granted_by_key: str | None = None
     granted_to_key: str | None = None
     note_key: str | None = None
-    user_key: str | None = None
+    target_user_key: str | None = None
     from_date: str | None = None
     to_date: str | None = None
     search: str | None = None
@@ -131,4 +131,19 @@ class LogFilter(BaseModel):
         if self.type == LogType.REGISTRATION:
             if self.note_action or self.permission_action:
                 raise HTTPException(400, "Only registration_action allowed for REGISTRATION type")
+        return self
+
+    @model_validator(mode="after")
+    def validate_single_action(self):
+        actions = [
+            self.note_action,
+            self.permission_action,
+            self.registration_action
+        ]
+        filled = [a for a in actions if a is not None]
+        if len(filled) > 1:
+            raise HTTPException(
+                400,
+                "Only one action filter can be used at a time"
+            )
         return self
