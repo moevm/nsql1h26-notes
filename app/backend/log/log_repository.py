@@ -51,6 +51,10 @@ class LogRepository:
             filters_list.append("n.created_at <= @to_date")
             bind_vars["to_date"] = filters.to_date
 
+        if filters.target_user_key is not None:
+            filters_list.append("n.user_key == @target_user_key")
+            bind_vars["target_user_key"] = filters.target_user_key
+
         if filters.search is not None:
             filters_list.append("""
                 (
