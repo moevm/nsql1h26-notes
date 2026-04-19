@@ -6,6 +6,7 @@ import {RegisterPage} from "@/pages/auth/register.page";
 import {NewNotePage} from "@/pages/note/newNote.page";
 import { NotePage } from "@/pages/note/note.page";
 import { NotePageLayout } from "@/pages/note/ui/layout";
+import { LogsPage } from "@/pages/logs/logs.page";
 
 function App() {
     return (
@@ -18,6 +19,9 @@ function App() {
                 <Route path="new" element={<NewNotePage />} />
                 <Route path=":noteKey" element={<NotePage />} />
             </Route>
+            <Route path="/logs" element={<Navigate replace to="/logs/my" />} />
+            <Route path="/logs/my" element={<LogsPage scope="my" />} />
+            <Route path="/admin/logs" element={<LogsPage scope="admin" />} />
             <Route path="*" element={<NotFoundPage />} />
         </Routes>
     );

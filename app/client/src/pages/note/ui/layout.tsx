@@ -9,6 +9,8 @@ import { noteProxy } from "@/entities/note/api/proxy";
 import type { Note } from "@/entities/note/types/dto";
 import { cn } from "@/lib/utils";
 import { NoteLayoutProvider } from "@/pages/note/ui/note-layout-context";
+import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { isAdminRole } from "@/shared/lib/access-token-payload";
 
 type NoteTreeNode = Note & {
   children: NoteTreeNode[];
@@ -121,6 +123,8 @@ function NoteTreeBranch({ nodes, activeNoteKey, onOpenNote, onContextMenu }: Not
 export const NotePageLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const currentUser = useAccessTokenPayload();
+  const isAdmin = isAdminRole(currentUser?.role);
   const { getNotes, loading, error } = useGetNotes();
   const [notes, setNotes] = useState<Note[]>([]);
   const [search, setSearch] = useState("");
@@ -259,6 +263,20 @@ export const NotePageLayout = () => {
         <Header
           title={activeNode?.title ? `Заметки / ${activeNode.title}` : "Заметки"}
           buttons={[
+            {
+              title: "Моя страница",
+              onClick: () => navigate("/logs/my"),
+              variant: "secondary",
+            },
+            ...(isAdmin
+              ? [
+                  {
+                    title: "Админ-панель",
+                    onClick: () => navigate("/admin/logs"),
+                    variant: "outline" as const,
+                  },
+                ]
+              : []),
             {
               title: "Новая заметка",
               onClick: () => navigate("/notes/new"),

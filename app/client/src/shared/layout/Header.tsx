@@ -17,12 +17,12 @@ export const Header: FC<HeaderProps> = ({ title, buttons, className }) => {
     return (
         <header
             className={cn(
-                "flex h-14 items-center justify-between border-b border-black/5 bg-white/90 px-6 text-foreground backdrop-blur",
+                "flex min-h-14 items-center justify-between gap-3 border-b border-black/5 bg-white/90 px-6 py-2 text-foreground backdrop-blur",
                 className,
             )}
         >
-            <h1 className="text-base font-semibold tracking-tight">{title}</h1>
-            <div className="flex items-center gap-2">
+            <h1 className="min-w-0 truncate text-base font-semibold">{title}</h1>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                 {buttons.map((button, idx) => (
                     <Button
                         key={`header-button-${idx}`}
