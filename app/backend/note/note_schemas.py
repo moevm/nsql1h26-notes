@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -39,7 +40,7 @@ class NoteResponse(NoteBase):
 
 
 class NoteFilter(BaseModel):
-    parent_key: str | None = None
+    parent_key: str | None | Literal["root"] = None
     tag: str | None = None
     search: str | None = None
 

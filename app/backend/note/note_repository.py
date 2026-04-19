@@ -81,11 +81,11 @@ class NoteRepository:
             "offset": filters.offset,
         }
 
-        if filters.parent_key is not None:
+        if filters.parent_key == "root":
+            filters_list.append("n.parent_key == null")
+        elif filters.parent_key is not None:
             filters_list.append("n.parent_key == @parent_key")
             bind_vars["parent_key"] = filters.parent_key
-        else:
-            filters_list.append("n.parent_key == null")
 
         if filters.tag is not None:
             filters_list.append("@tag IN n.tags")
@@ -108,7 +108,12 @@ class NoteRepository:
 
         if filters.search is not None:
             filters_list.append(
-                "CONTAINS(LOWER(n.title), LOWER(@search)) OR CONTAINS(LOWER(n.content), LOWER(@search))"
+                """
+                (
+                    CONTAINS(LOWER(n.title), LOWER(@search)) OR
+                    CONTAINS(LOWER(n.content), LOWER(@search))
+                )
+                """
             )
             bind_vars["search"] = filters.search
 
