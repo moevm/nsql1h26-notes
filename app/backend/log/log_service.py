@@ -1,7 +1,9 @@
 from typing import List
 from fastapi import HTTPException
 
+from auth.auth_schemas import UserRole
 from log.log_repository import LogRepository
+from model.user import User
 from user.user_service import UserService
 from log.log_schemas import (
     RegistrationLogResponse,
@@ -100,6 +102,9 @@ class LogService:
 
         return self._to_permission_response(log)
 
-    def get_user_logs(self, user_key: str, filters: LogFilter) -> List[LogResponse]:
-        raw_logs = self.repo.get_by_user(user_key, filters)
+    def get_user_logs(self, user: User, filters: LogFilter) -> List[LogResponse]:
+        if user.role == UserRole.ADMIN:
+            raw_logs = self.repo.get_all(filters)
+        else:
+            raw_logs = self.repo.get_by_user(user.user_key, filters)
         return [self._to_response(log) for log in raw_logs]

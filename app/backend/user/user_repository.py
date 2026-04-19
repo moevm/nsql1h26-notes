@@ -2,6 +2,7 @@ from typing import Optional, List
 from datetime import datetime, timezone
 from arango.database import StandardDatabase
 
+from auth.auth_schemas import UserRole
 from model.user import User
 from core.security import hash_password
 from utils.datetime_utils import now_iso
@@ -48,7 +49,7 @@ class UserRepository:
             "username": username,
             "hashed_password": hashed_password,
             "created_at": now_iso(),
-            "role": "User"
+            "role": UserRole.USER.value
         }
 
         result = self.collection.insert(data)

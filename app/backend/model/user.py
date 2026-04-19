@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from auth.auth_schemas import UserRole
+
 
 @dataclass
 class User:
@@ -8,4 +10,4 @@ class User:
     username: str
     password: str
     created_at: datetime
-    role: str
+    role: UserRole
