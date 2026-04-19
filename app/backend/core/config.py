@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     ARANGO_PASSWORD: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ADMIN_USERNAME: str = 'admin'
+    ADMIN_PASSWORD: str = "adminpass"
 
     @property
     def database_url(self) -> str:

@@ -1,9 +1,13 @@
 from arango import ArangoClient
 from arango.database import StandardDatabase
 from arango.exceptions import CollectionCreateError, DatabaseCreateError, ServerConnectionError
+from passlib.context import CryptContext
 
+from auth.auth_schemas import UserRole
 from core.config import get_settings
 from time import sleep
+
+from utils.datetime_utils import now_iso
 
 settings = get_settings()
 
@@ -70,6 +74,28 @@ def ensure_db(
     raise RuntimeError(
         "ArangoDB is unavailable after repeated startup attempts"
     ) from last_error
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def ensure_admin_exists(db: StandardDatabase):
+    users = db.collection("users")
+    query = """
+    FOR u IN users
+        FILTER u.role == @role
+        LIMIT 1
+        RETURN u
+    """
+    cursor = db.aql.execute(query, bind_vars={"role": UserRole.ADMIN.value})
+    admin = next(cursor, None)
+    if admin:
+        return
+    admin_user = {
+        "username": settings.ADMIN_USERNAME,
+        "hashed_password": pwd_context.hash(settings.ADMIN_PASSWORD),
+        "role": UserRole.ADMIN.value,
+        "created_at": now_iso(),
+    }
+    users.insert(admin_user)
 
 
 def get_db():
