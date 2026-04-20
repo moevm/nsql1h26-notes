@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ADMIN_USERNAME: str = 'admin'
     ADMIN_PASSWORD: str = "adminpass"
+    USER_USERNAME: str = "test_user"
+    USER_PASSWORD: str = "password"
 
     @property
     def database_url(self) -> str:

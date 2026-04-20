@@ -1,3 +1,5 @@
+from typing import List, Dict
+
 from arango import ArangoClient
 from arango.database import StandardDatabase
 from arango.exceptions import CollectionCreateError, DatabaseCreateError, ServerConnectionError
@@ -17,7 +19,18 @@ db: StandardDatabase | None = None
 COLLECTIONS: tuple[str, ...] = ("users", "notes","logs")
 MAX_INIT_ATTEMPTS = 30
 RETRY_DELAY_SECONDS = 2.0
-
+DEBUG_USERS: List[Dict] = [
+    {
+        "username": settings.ADMIN_USERNAME,
+        "password": settings.ADMIN_PASSWORD,
+        "role": UserRole.ADMIN.value,
+    },
+    {
+        "username": settings.USER_USERNAME,
+        "password": settings.USER_PASSWORD,
+        "role": UserRole.USER.value,
+    }
+]
 
 def ensure_db(
     max_attempts: int = MAX_INIT_ATTEMPTS,
@@ -77,25 +90,31 @@ def ensure_db(
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 def ensure_admin_exists(db: StandardDatabase):
     users = db.collection("users")
-    query = """
-    FOR u IN users
-        FILTER u.role == @role
-        LIMIT 1
-        RETURN u
-    """
-    cursor = db.aql.execute(query, bind_vars={"role": UserRole.ADMIN.value})
-    admin = next(cursor, None)
-    if admin:
-        return
-    admin_user = {
-        "username": settings.ADMIN_USERNAME,
-        "hashed_password": pwd_context.hash(settings.ADMIN_PASSWORD),
-        "role": UserRole.ADMIN.value,
-        "created_at": now_iso(),
-    }
-    users.insert(admin_user)
+
+    for debug_user in DEBUG_USERS:
+        query = """
+        FOR u IN users
+            FILTER u.username == @username
+            LIMIT 1
+            RETURN u
+        """
+        cursor = db.aql.execute(query, bind_vars={"username": debug_user["username"]})
+        existing_user = next(cursor, None)
+
+        if not existing_user:
+            user_data = {
+                "username": debug_user["username"],
+                "hashed_password": pwd_context.hash(debug_user["password"]),
+                "role": debug_user["role"],
+                "created_at": now_iso(),
+            }
+            users.insert(user_data)
+            print(f"[DB INIT] Created {debug_user['role']} user: {debug_user['username']}")
+        else:
+            print(f"[DB INIT] {debug_user['role']} user already exists: {debug_user['username']}")
 
 
 def get_db():
