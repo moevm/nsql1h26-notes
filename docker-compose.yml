@@ -10,7 +10,16 @@ services:
       - arangodb_data:/var/lib/arangodb3
     networks:
       - backend_network
+    healthcheck:
+      test: ["CMD", "arangosh", "--server.endpoint", "http://localhost:8529",
+             "--server.username", "${ARANGO_USER}", "--server.password", "${ARANGO_ROOT_PASSWORD}",
+             "--javascript.execute-string", "db._version()"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     restart: unless-stopped
+
   
   backend:
     build:
@@ -24,7 +33,8 @@ services:
     networks:
       - backend_network
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   client:
