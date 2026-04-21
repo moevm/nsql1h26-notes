@@ -24,6 +24,7 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
     const { getLogs, loading, error } = useGetLogs();
     const [authReady, setAuthReady] = useState(false);
     const [logs, setLogs] = useState<Log[]>([]);
+    const [lastPageOffset, setLastPageOffset] = useState<number | null>(null);
     const [draftFilters, setDraftFilters] = useState<LogFilters>(defaultFilters);
     const [appliedFilters, setAppliedFilters] = useState<LogFilters>(defaultFilters);
 
@@ -99,13 +100,37 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
         let alive = true;
 
         const loadLogs = async () => {
+            const requestedOffset = appliedFilters.offset;
             const result = await getLogs(buildQuery(appliedFilters, scope, currentUser));
 
             if (!alive || !result) {
                 return;
             }
 
+            if (requestedOffset > 0 && result.length === 0) {
+                const fallbackOffset = Math.max(0, requestedOffset - appliedFilters.limit);
+
+                setLastPageOffset(fallbackOffset);
+                setAppliedFilters((current) =>
+                    current.offset === requestedOffset
+                        ? { ...current, offset: fallbackOffset }
+                        : current,
+                );
+                return;
+            }
+
             setLogs(result);
+            setLastPageOffset((current) => {
+                if (result.length < appliedFilters.limit) {
+                    return requestedOffset;
+                }
+
+                if (current !== null && requestedOffset <= current) {
+                    return current;
+                }
+
+                return null;
+            });
         };
 
         void loadLogs();
@@ -135,7 +160,10 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
 
     const availableActions = getActionOptions(draftFilters.type);
     const currentPage = Math.floor(appliedFilters.offset / appliedFilters.limit) + 1;
-    const hasNextPage = logs.length === appliedFilters.limit;
+    const hasNextPage =
+        lastPageOffset !== null
+            ? appliedFilters.offset < lastPageOffset
+            : logs.length === appliedFilters.limit;
     const pageNumbers = useMemo(() => {
         const pages = new Set<number>([1, currentPage]);
 
@@ -167,10 +195,12 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
     };
 
     const applyFilters = () => {
+        setLastPageOffset(null);
         setAppliedFilters({ ...draftFilters, offset: 0 });
     };
 
     const resetFilters = () => {
+        setLastPageOffset(null);
         setDraftFilters(defaultFilters);
         setAppliedFilters(defaultFilters);
     };
@@ -182,6 +212,7 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
             action: "",
             offset: 0,
         };
+        setLastPageOffset(null);
         setDraftFilters(nextFilters);
         setAppliedFilters(nextFilters);
     };
@@ -203,13 +234,18 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
     const goToPage = (page: number) => {
         setAppliedFilters((current) => ({
             ...current,
-            offset: (page - 1) * current.limit,
+            offset:
+                lastPageOffset !== null
+                && (page - 1) * current.limit > lastPageOffset
+                    ? current.offset
+                    : (page - 1) * current.limit,
         }));
     };
 
     const updateLimit = (limit: number) => {
         const nextLimit = Math.max(1, Math.floor(limit));
 
+        setLastPageOffset(null);
         setDraftFilters((current) => ({
             ...current,
             limit: nextLimit,
