@@ -1,13 +1,32 @@
+from typing import List
+
 from fastapi import HTTPException
 
+from auth.auth_schemas import UserRole
 from core.security import hash_password
+from model.user import User
 from user.user_repository import UserRepository
+from user.user_schemas import UserResponse
 
 
 class UserService:
 
     def __init__(self, user_repo: UserRepository):
         self.user_repo = user_repo
+
+    def get_all_users(self, user: User) -> List[UserResponse]:
+        if user.role != UserRole.ADMIN:
+            raise HTTPException(403, "You are not allowed to access this resource")
+        users = self.user_repo.get_all()
+        return [
+            UserResponse(
+                user_key=u.user_key,
+                username=u.username,
+                role=u.role
+            )
+            for u in users
+        ]
+
 
     def create_user(self, username: str, password: str):
         hashed = hash_password(password)

@@ -13,7 +13,19 @@ class UserRepository:
     def __init__(self, db: StandardDatabase):
         self.db = db
         self.collection = db.collection("users")
-    
+
+    def get_all(self) -> List[User]:
+        query = """
+        FOR u IN users
+            RETURN u
+        """
+        cursor = self.db.aql.execute(query)
+        return [
+            self._data_to_user_model(row)
+            for row in cursor
+            if row
+        ]
+
     def get_by_username(self, username: str) -> Optional[User]:
         query = """
         FOR u IN users
@@ -28,7 +40,7 @@ class UserRepository:
         )
 
         return self._data_to_user_model(next(cursor, None))
-    
+
     def get_by_key(self, key: str) -> Optional[User]:
         query = """
         FOR u IN users
@@ -41,9 +53,9 @@ class UserRepository:
             query,
             bind_vars={"key": key}
         )
-        
+
         return self._data_to_user_model(next(cursor, None))
-    
+
     def create(self, username: str, hashed_password: str) -> User:
         data = {
             "username": username,
@@ -56,11 +68,11 @@ class UserRepository:
         data.update(result)
 
         return self._data_to_user_model(data)
-    
+
     def _data_to_user_model(self, data: dict) -> User | None:
         if not data:
             return None
-        
+
         return User(
             user_key=data["_key"],
             username=data["username"],
