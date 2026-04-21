@@ -49,7 +49,13 @@ export const NotePageLayout = () => {
     const currentUser = useAccessTokenPayload();
     const isAdmin = isAdminRole(currentUser?.role);
     const { getNotes, loading, error } = useGetNotes();
+    const {
+        getNotes: getFilterNotes,
+        loading: filterNotesLoading,
+        error: filterNotesError,
+    } = useGetNotes();
     const [notes, setNotes] = useState<Note[]>([]);
+    const [filterNotes, setFilterNotes] = useState<Note[]>([]);
     const [filters, setFilters] = useState<NoteFilters>(DEFAULT_NOTE_FILTERS);
     const [debouncedSearch, setDebouncedSearch] = useState(
         DEFAULT_NOTE_FILTERS.search,
@@ -119,6 +125,33 @@ export const NotePageLayout = () => {
             alive = false;
         };
     }, [getNotes, noteRequest, reloadIndex]);
+
+    useEffect(() => {
+        if (!filtersOpen) {
+            return;
+        }
+
+        let alive = true;
+
+        const loadFilterNotes = async () => {
+            const result = await getFilterNotes({
+                limit: 256,
+                offset: 0,
+            });
+
+            if (!alive || !result) {
+                return;
+            }
+
+            setFilterNotes(result);
+        };
+
+        void loadFilterNotes();
+
+        return () => {
+            alive = false;
+        };
+    }, [filtersOpen, getFilterNotes, reloadIndex]);
 
     useEffect(() => {
         const closeMenu = () => setContextMenu(null);
@@ -291,6 +324,9 @@ export const NotePageLayout = () => {
                 <NoteFiltersModal
                     open={filtersOpen}
                     filters={filters}
+                    notes={filterNotes}
+                    notesLoading={filterNotesLoading}
+                    notesError={filterNotesError}
                     onApply={applyFilters}
                     onReset={resetFilters}
                     onClose={() => setFiltersOpen(false)}
