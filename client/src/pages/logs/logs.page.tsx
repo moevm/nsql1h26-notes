@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { usersProxy } from "@/entities/user/api/users.proxy";
+import type { Note } from "@/entities/note/types/dto";
 import { authProxy } from "@/entities/user/api/auth.proxy";
 import type { Log } from "@/entities/logs/types/responses";
 import type { LogType } from "@/entities/logs/types/base";
+import type { GetUsersResponse } from "@/entities/user/types/responses";
+import { useGetNotes } from "@/features/note/hooks/use-get-notes";
 import { useGetLogs } from "@/features/logs/hooks/use-get-logs";
 import { Header } from "@/shared/layout/Header";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
@@ -22,8 +26,15 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
     const currentUser = useAccessTokenPayload();
     const isAdmin = isAdminRole(currentUser?.role);
     const { getLogs, loading, error } = useGetLogs();
+    const { getNotes } = useGetNotes();
     const [authReady, setAuthReady] = useState(false);
     const [logs, setLogs] = useState<Log[]>([]);
+    const [notes, setNotes] = useState<Note[]>([]);
+    const [notesLoading, setNotesLoading] = useState(false);
+    const [notesError, setNotesError] = useState<string | null>(null);
+    const [users, setUsers] = useState<GetUsersResponse>([]);
+    const [usersLoading, setUsersLoading] = useState(false);
+    const [usersError, setUsersError] = useState<string | null>(null);
     const [lastPageOffset, setLastPageOffset] = useState<number | null>(null);
     const [draftFilters, setDraftFilters] = useState<LogFilters>(defaultFilters);
     const [appliedFilters, setAppliedFilters] = useState<LogFilters>(defaultFilters);
@@ -71,6 +82,101 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
             alive = false;
         };
     }, []);
+
+    useEffect(() => {
+        if (!authReady) {
+            setNotes([]);
+            setNotesError(null);
+            setNotesLoading(false);
+            return;
+        }
+
+        let alive = true;
+
+        const loadNotes = async () => {
+            setNotesLoading(true);
+            setNotesError(null);
+
+            try {
+                const result = await getNotes({
+                    limit: 200,
+                    offset: 0,
+                });
+
+                if (!alive) {
+                    return;
+                }
+
+                setNotes(result ?? []);
+            } catch (err) {
+                if (!alive) {
+                    return;
+                }
+
+                setNotes([]);
+                setNotesError(err instanceof Error ? err.message : "Не удалось загрузить заметки");
+            } finally {
+                if (alive) {
+                    setNotesLoading(false);
+                }
+            }
+        };
+
+        void loadNotes();
+
+        return () => {
+            alive = false;
+        };
+    }, [authReady, getNotes]);
+
+    useEffect(() => {
+        if (!authReady || !isAdmin) {
+            setUsers([]);
+            setUsersError(null);
+            setUsersLoading(false);
+            return;
+        }
+
+        const token = getAccessToken();
+
+        if (!token) {
+            return;
+        }
+
+        let alive = true;
+
+        const loadUsers = async () => {
+            setUsersLoading(true);
+            setUsersError(null);
+
+            try {
+                const result = await usersProxy.getUsers(token);
+
+                if (!alive) {
+                    return;
+                }
+
+                setUsers(result ?? []);
+            } catch (err) {
+                if (!alive) {
+                    return;
+                }
+
+                setUsers([]);
+                setUsersError(err instanceof Error ? err.message : "Не удалось загрузить пользователей");
+            } finally {
+                if (alive) {
+                    setUsersLoading(false);
+                }
+            }
+        };
+
+        void loadUsers();
+
+        return () => {
+            alive = false;
+        };
+    }, [authReady, isAdmin]);
 
     useEffect(() => {
         if (!authReady) {
@@ -303,9 +409,16 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                     title={title}
                     subtitle={subtitle}
                     scope={scope}
+                    isAdmin={isAdmin}
                     filters={draftFilters}
                     stats={stats}
                     loading={loading}
+                    notes={notes}
+                    notesLoading={notesLoading}
+                    notesError={notesError}
+                    users={users}
+                    usersLoading={usersLoading}
+                    usersError={usersError}
                     availableActions={availableActions}
                     onApply={applyFilters}
                     onReset={resetFilters}

@@ -1,11 +1,11 @@
-import { type KeyboardEvent, useEffect, useState } from "react";
-import { ClipboardList, Loader2 } from "lucide-react";
+import {type KeyboardEvent, useEffect, useState} from "react";
+import {ClipboardList, Loader2} from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import type { Log } from "@/entities/logs/types/responses";
-import { typeLabels } from "@/pages/logs/ui/constants";
-import { formatDate, formatKey, getActionLabel, getLogTitle } from "@/pages/logs/ui/helpers";
+import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
+import type {Log} from "@/entities/logs/types/responses";
+import {typeLabels} from "@/pages/logs/ui/constants";
+import {formatDate, formatKey, getActionLabel, getLogTitle} from "@/pages/logs/ui/helpers";
 
 interface LogsResultsProps {
     logs: Log[];
@@ -214,7 +214,7 @@ export function LogsResults({
                                         Объект
                                     </th>
                                     <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
-                                        Участники
+                                        ID-участников
                                     </th>
                                     <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
                                         Детали
