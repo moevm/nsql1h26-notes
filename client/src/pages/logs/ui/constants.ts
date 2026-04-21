@@ -1,7 +1,7 @@
 import type { LogType } from "@/entities/logs/types/base";
 import type { ActionFilter, LogFilters } from "@/pages/logs/ui/types";
 
-export const DEFAULT_LIMIT = 50;
+export const DEFAULT_LIMIT = 20;
 
 export const defaultFilters: LogFilters = {
     type: "",

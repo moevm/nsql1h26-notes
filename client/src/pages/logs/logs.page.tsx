@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { usersProxy } from "@/entities/user/api/users.proxy";
+import type { Note } from "@/entities/note/types/dto";
 import { authProxy } from "@/entities/user/api/auth.proxy";
 import type { Log } from "@/entities/logs/types/responses";
 import type { LogType } from "@/entities/logs/types/base";
+import type { GetUsersResponse } from "@/entities/user/types/responses";
+import { useGetNotes } from "@/features/note/hooks/use-get-notes";
 import { useGetLogs } from "@/features/logs/hooks/use-get-logs";
 import { Header } from "@/shared/layout/Header";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
@@ -22,8 +26,16 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
     const currentUser = useAccessTokenPayload();
     const isAdmin = isAdminRole(currentUser?.role);
     const { getLogs, loading, error } = useGetLogs();
+    const { getNotes } = useGetNotes();
     const [authReady, setAuthReady] = useState(false);
     const [logs, setLogs] = useState<Log[]>([]);
+    const [notes, setNotes] = useState<Note[]>([]);
+    const [notesLoading, setNotesLoading] = useState(false);
+    const [notesError, setNotesError] = useState<string | null>(null);
+    const [users, setUsers] = useState<GetUsersResponse>([]);
+    const [usersLoading, setUsersLoading] = useState(false);
+    const [usersError, setUsersError] = useState<string | null>(null);
+    const [lastPageOffset, setLastPageOffset] = useState<number | null>(null);
     const [draftFilters, setDraftFilters] = useState<LogFilters>(defaultFilters);
     const [appliedFilters, setAppliedFilters] = useState<LogFilters>(defaultFilters);
 
@@ -73,6 +85,101 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
 
     useEffect(() => {
         if (!authReady) {
+            setNotes([]);
+            setNotesError(null);
+            setNotesLoading(false);
+            return;
+        }
+
+        let alive = true;
+
+        const loadNotes = async () => {
+            setNotesLoading(true);
+            setNotesError(null);
+
+            try {
+                const result = await getNotes({
+                    limit: 200,
+                    offset: 0,
+                });
+
+                if (!alive) {
+                    return;
+                }
+
+                setNotes(result ?? []);
+            } catch (err) {
+                if (!alive) {
+                    return;
+                }
+
+                setNotes([]);
+                setNotesError(err instanceof Error ? err.message : "Не удалось загрузить заметки");
+            } finally {
+                if (alive) {
+                    setNotesLoading(false);
+                }
+            }
+        };
+
+        void loadNotes();
+
+        return () => {
+            alive = false;
+        };
+    }, [authReady, getNotes]);
+
+    useEffect(() => {
+        if (!authReady || !isAdmin) {
+            setUsers([]);
+            setUsersError(null);
+            setUsersLoading(false);
+            return;
+        }
+
+        const token = getAccessToken();
+
+        if (!token) {
+            return;
+        }
+
+        let alive = true;
+
+        const loadUsers = async () => {
+            setUsersLoading(true);
+            setUsersError(null);
+
+            try {
+                const result = await usersProxy.getUsers(token);
+
+                if (!alive) {
+                    return;
+                }
+
+                setUsers(result ?? []);
+            } catch (err) {
+                if (!alive) {
+                    return;
+                }
+
+                setUsers([]);
+                setUsersError(err instanceof Error ? err.message : "Не удалось загрузить пользователей");
+            } finally {
+                if (alive) {
+                    setUsersLoading(false);
+                }
+            }
+        };
+
+        void loadUsers();
+
+        return () => {
+            alive = false;
+        };
+    }, [authReady, isAdmin]);
+
+    useEffect(() => {
+        if (!authReady) {
             return;
         }
 
@@ -99,13 +206,37 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
         let alive = true;
 
         const loadLogs = async () => {
+            const requestedOffset = appliedFilters.offset;
             const result = await getLogs(buildQuery(appliedFilters, scope, currentUser));
 
             if (!alive || !result) {
                 return;
             }
 
+            if (requestedOffset > 0 && result.length === 0) {
+                const fallbackOffset = Math.max(0, requestedOffset - appliedFilters.limit);
+
+                setLastPageOffset(fallbackOffset);
+                setAppliedFilters((current) =>
+                    current.offset === requestedOffset
+                        ? { ...current, offset: fallbackOffset }
+                        : current,
+                );
+                return;
+            }
+
             setLogs(result);
+            setLastPageOffset((current) => {
+                if (result.length < appliedFilters.limit) {
+                    return requestedOffset;
+                }
+
+                if (current !== null && requestedOffset <= current) {
+                    return current;
+                }
+
+                return null;
+            });
         };
 
         void loadLogs();
@@ -135,6 +266,27 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
 
     const availableActions = getActionOptions(draftFilters.type);
     const currentPage = Math.floor(appliedFilters.offset / appliedFilters.limit) + 1;
+    const hasNextPage =
+        lastPageOffset !== null
+            ? appliedFilters.offset < lastPageOffset
+            : logs.length === appliedFilters.limit;
+    const pageNumbers = useMemo(() => {
+        const pages = new Set<number>([1, currentPage]);
+
+        if (currentPage > 1) {
+            pages.add(currentPage - 1);
+        }
+
+        if (currentPage > 2) {
+            pages.add(currentPage - 2);
+        }
+
+        if (hasNextPage) {
+            pages.add(currentPage + 1);
+        }
+
+        return Array.from(pages).sort((left, right) => left - right);
+    }, [currentPage, hasNextPage]);
 
     const updateField = (field: keyof LogFilters, value: string | number) => {
         setDraftFilters((current) => ({ ...current, [field]: value }));
@@ -149,10 +301,12 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
     };
 
     const applyFilters = () => {
+        setLastPageOffset(null);
         setAppliedFilters({ ...draftFilters, offset: 0 });
     };
 
     const resetFilters = () => {
+        setLastPageOffset(null);
         setDraftFilters(defaultFilters);
         setAppliedFilters(defaultFilters);
     };
@@ -164,6 +318,7 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
             action: "",
             offset: 0,
         };
+        setLastPageOffset(null);
         setDraftFilters(nextFilters);
         setAppliedFilters(nextFilters);
     };
@@ -179,6 +334,33 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
         setAppliedFilters((current) => ({
             ...current,
             offset: current.offset + current.limit,
+        }));
+    };
+
+    const goToPage = (page: number) => {
+        setAppliedFilters((current) => ({
+            ...current,
+            offset:
+                lastPageOffset !== null
+                && (page - 1) * current.limit > lastPageOffset
+                    ? current.offset
+                    : (page - 1) * current.limit,
+        }));
+    };
+
+    const updateLimit = (limit: number) => {
+        const nextLimit = Math.max(1, Math.floor(limit));
+
+        setLastPageOffset(null);
+        setDraftFilters((current) => ({
+            ...current,
+            limit: nextLimit,
+            offset: 0,
+        }));
+        setAppliedFilters((current) => ({
+            ...current,
+            limit: nextLimit,
+            offset: 0,
         }));
     };
 
@@ -227,9 +409,16 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                     title={title}
                     subtitle={subtitle}
                     scope={scope}
+                    isAdmin={isAdmin}
                     filters={draftFilters}
                     stats={stats}
                     loading={loading}
+                    notes={notes}
+                    notesLoading={notesLoading}
+                    notesError={notesError}
+                    users={users}
+                    usersLoading={usersLoading}
+                    usersError={usersError}
                     availableActions={availableActions}
                     onApply={applyFilters}
                     onReset={resetFilters}
@@ -243,8 +432,12 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                     loading={loading}
                     error={error}
                     currentPage={currentPage}
+                    pageNumbers={pageNumbers}
+                    hasNextPage={hasNextPage}
                     limit={appliedFilters.limit}
                     offset={appliedFilters.offset}
+                    onGoToPage={goToPage}
+                    onLimitChange={updateLimit}
                     onPreviousPage={previousPage}
                     onNextPage={nextPage}
                 />

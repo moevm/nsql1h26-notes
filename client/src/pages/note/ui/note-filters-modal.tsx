@@ -1,18 +1,21 @@
-import { type FormEvent, useEffect, useState } from "react";
-import { RotateCcw, X } from "lucide-react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { ChevronDown, RotateCcw, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import type { Note } from "@/entities/note/types/dto";
+import { formatKey } from "@/pages/logs/ui/helpers";
+import { LogNotePickerModal } from "@/pages/logs/ui/log-note-picker-modal";
 import { Input } from "@/components/ui/input";
-import {
-    DEFAULT_NOTE_FILTERS,
-    type NoteFilters,
-} from "@/pages/note/ui/note-filters";
+import { DEFAULT_NOTE_FILTERS, type NoteFilters } from "@/pages/note/ui/note-filters";
 
 type TextFilterField = Exclude<keyof NoteFilters, "limit" | "offset">;
 
 interface NoteFiltersModalProps {
     open: boolean;
     filters: NoteFilters;
+    notes: Note[];
+    notesLoading: boolean;
+    notesError: string | null;
     onApply: (filters: NoteFilters) => void;
     onReset: () => void;
     onClose: () => void;
@@ -21,17 +24,27 @@ interface NoteFiltersModalProps {
 export function NoteFiltersModal({
     open,
     filters,
+    notes,
+    notesLoading,
+    notesError,
     onApply,
     onReset,
     onClose,
 }: NoteFiltersModalProps) {
     const [draft, setDraft] = useState<NoteFilters>(filters);
+    const [notePickerOpen, setNotePickerOpen] = useState(false);
 
     useEffect(() => {
         if (open) {
             setDraft(filters);
         }
     }, [filters, open]);
+
+    useEffect(() => {
+        if (!open) {
+            setNotePickerOpen(false);
+        }
+    }, [open]);
 
     useEffect(() => {
         if (!open) {
@@ -48,19 +61,25 @@ export function NoteFiltersModal({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [onClose, open]);
 
+    const noteMap = useMemo(
+        () => new Map(notes.map((note) => [note.note_key, note])),
+        [notes],
+    );
+
+    const selectedParent = draft.parent_key
+        ? noteMap.get(draft.parent_key)
+        : null;
+
+    const parentLabel = !draft.parent_key
+        ? "Не выбран"
+        : selectedParent?.title || formatKey(draft.parent_key);
+
     if (!open) {
         return null;
     }
 
     const updateTextField = (field: TextFilterField, value: string) => {
         setDraft((current) => ({ ...current, [field]: value }));
-    };
-
-    const updateNumberField = (field: "limit" | "offset", value: string) => {
-        setDraft((current) => ({
-            ...current,
-            [field]: Number(value),
-        }));
     };
 
     const applyFilters = (event: FormEvent<HTMLFormElement>) => {
@@ -143,16 +162,17 @@ export function NoteFiltersModal({
 
                     <label className="grid gap-1.5 text-sm md:col-span-2">
                         <span className="font-medium">parent_key</span>
-                        <Input
-                            value={draft.parent_key}
-                            onChange={(event) =>
-                                updateTextField(
-                                    "parent_key",
-                                    event.target.value,
-                                )
-                            }
-                            placeholder="Ключ родительской заметки"
-                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="h-10 justify-between px-3 font-normal"
+                            onClick={() => setNotePickerOpen(true)}
+                        >
+                            <span className={draft.parent_key ? "text-foreground" : "text-muted-foreground"}>
+                                Родительская заметка: {parentLabel}
+                            </span>
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                     </label>
 
                     <label className="grid gap-1.5 text-sm">
@@ -210,30 +230,6 @@ export function NoteFiltersModal({
                             }
                         />
                     </label>
-
-                    <label className="grid gap-1.5 text-sm">
-                        <span className="font-medium">limit</span>
-                        <Input
-                            type="number"
-                            min={1}
-                            value={draft.limit}
-                            onChange={(event) =>
-                                updateNumberField("limit", event.target.value)
-                            }
-                        />
-                    </label>
-
-                    <label className="grid gap-1.5 text-sm">
-                        <span className="font-medium">offset</span>
-                        <Input
-                            type="number"
-                            min={0}
-                            value={draft.offset}
-                            onChange={(event) =>
-                                updateNumberField("offset", event.target.value)
-                            }
-                        />
-                    </label>
                 </div>
 
                 <div className="mt-6 flex flex-wrap justify-end gap-2">
@@ -251,6 +247,23 @@ export function NoteFiltersModal({
                     <Button type="submit">Применить</Button>
                 </div>
             </form>
+
+            <LogNotePickerModal
+                open={notePickerOpen}
+                notes={notes}
+                loading={notesLoading}
+                error={notesError}
+                selectedNoteKey={draft.parent_key}
+                onSelect={(noteKey) => {
+                    updateTextField("parent_key", noteKey);
+                    setNotePickerOpen(false);
+                }}
+                onClear={() => {
+                    updateTextField("parent_key", "");
+                    setNotePickerOpen(false);
+                }}
+                onClose={() => setNotePickerOpen(false)}
+            />
         </div>
     );
 }

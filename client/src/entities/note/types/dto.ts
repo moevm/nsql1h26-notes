@@ -5,6 +5,7 @@ export type Note = {
     tags: string[]
     note_key: string
     user_ref: string
+    username: string
     created_at: string
     updated_at: string
 }
