@@ -1,12 +1,9 @@
-import { type FormEvent, useEffect, useState } from "react";
-import { RotateCcw, X } from "lucide-react";
+import {type FormEvent, useEffect, useState} from "react";
+import {RotateCcw, X} from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-    DEFAULT_NOTE_FILTERS,
-    type NoteFilters,
-} from "@/pages/note/ui/note-filters";
+import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
+import {DEFAULT_NOTE_FILTERS, type NoteFilters,} from "@/pages/note/ui/note-filters";
 
 type TextFilterField = Exclude<keyof NoteFilters, "limit" | "offset">;
 
@@ -207,30 +204,6 @@ export function NoteFiltersModal({
                                     "updated_to",
                                     event.target.value,
                                 )
-                            }
-                        />
-                    </label>
-
-                    <label className="grid gap-1.5 text-sm">
-                        <span className="font-medium">limit</span>
-                        <Input
-                            type="number"
-                            min={1}
-                            value={draft.limit}
-                            onChange={(event) =>
-                                updateNumberField("limit", event.target.value)
-                            }
-                        />
-                    </label>
-
-                    <label className="grid gap-1.5 text-sm">
-                        <span className="font-medium">offset</span>
-                        <Input
-                            type="number"
-                            min={0}
-                            value={draft.offset}
-                            onChange={(event) =>
-                                updateNumberField("offset", event.target.value)
                             }
                         />
                     </label>

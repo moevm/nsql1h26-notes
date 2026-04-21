@@ -1,4 +1,4 @@
-import {type KeyboardEvent, useEffect, useState} from "react";
+import {type KeyboardEvent, type ReactNode, useEffect, useState} from "react";
 import {ClipboardList, Loader2} from "lucide-react";
 
 import {Button} from "@/components/ui/button";
@@ -20,6 +20,69 @@ interface LogsResultsProps {
     onLimitChange: (limit: number) => void;
     onPreviousPage: () => void;
     onNextPage: () => void;
+}
+
+function EmptyCell() {
+    return <span className="text-xs text-muted-foreground">-</span>;
+}
+
+function ValueLabel({ children }: { children: ReactNode }) {
+    return (
+        <span className="inline-flex rounded-sm bg-black/[0.05] px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            {children}
+        </span>
+    );
+}
+
+function NoteValueBlock({
+    label,
+    children,
+}: {
+    label: string;
+    children: ReactNode;
+}) {
+    return (
+        <div className="space-y-1 rounded-md bg-black/[0.03] p-2">
+            <ValueLabel>{label}</ValueLabel>
+            <div className="text-sm break-words">{children}</div>
+        </div>
+    );
+}
+
+function TagsList({ tags }: { tags?: string[] }) {
+    if (!tags?.length) {
+        return <span className="text-xs text-muted-foreground">нет тегов</span>;
+    }
+
+    return (
+        <div className="flex flex-wrap gap-1">
+            {tags.map((tag) => (
+                <span key={tag} className="rounded-sm border border-black/10 px-1.5 py-0.5 text-xs">
+                    {tag}
+                </span>
+            ))}
+        </div>
+    );
+}
+
+function NoteComparisonCell({
+    before,
+    after,
+}: {
+    before: ReactNode;
+    after: ReactNode;
+}) {
+    return (
+        <div className="min-w-[240px] space-y-2">
+            <NoteValueBlock label="До">{before}</NoteValueBlock>
+            <NoteValueBlock label="После">{after}</NoteValueBlock>
+        </div>
+    );
+}
+
+function getStateText(value?: string | null, emptyLabel = "Пусто") {
+    const normalized = value?.trim();
+    return normalized || <span className="text-xs text-muted-foreground">{emptyLabel}</span>;
 }
 
 function LogEntityCell({ log }: { log: Log }) {
@@ -84,6 +147,45 @@ function LogActorsCell({ log }: { log: Log }) {
     );
 }
 
+function LogContentCell({ log }: { log: Log }) {
+    if (log.type !== "note") {
+        return <LogEntityCell log={log} />;
+    }
+
+    return (
+        <NoteComparisonCell
+            before={getStateText(log.state_before?.content, "Пустое описание")}
+            after={getStateText(log.state_after?.content, "Пустое описание")}
+        />
+    );
+}
+
+function LogTitleCell({ log }: { log: Log }) {
+    if (log.type !== "note") {
+        return <EmptyCell />;
+    }
+
+    return (
+        <NoteComparisonCell
+            before={getStateText(log.state_before?.title, "Без названия")}
+            after={getStateText(log.state_after?.title, "Без названия")}
+        />
+    );
+}
+
+function LogTagsCell({ log }: { log: Log }) {
+    if (log.type !== "note") {
+        return <EmptyCell />;
+    }
+
+    return (
+        <NoteComparisonCell
+            before={<TagsList tags={log.state_before?.tags} />}
+            after={<TagsList tags={log.state_after?.tags} />}
+        />
+    );
+}
+
 function LogDetailsCell({ log }: { log: Log }) {
     if (log.type === "registration") {
         return <span className="text-sm text-muted-foreground">Создание аккаунта</span>;
@@ -97,14 +199,12 @@ function LogDetailsCell({ log }: { log: Log }) {
         );
     }
 
-    const titleBefore = log.state_before?.title || "Без названия";
-    const titleAfter = log.state_after?.title || "Без названия";
     const diff = log.diff?.trim();
 
     return (
         <div className="max-w-[380px] space-y-1">
-            <p className="text-sm text-muted-foreground">
-                {titleBefore} -&gt; {titleAfter}
+            <p className="font-mono text-xs text-muted-foreground" title={log.note_key}>
+                note: {formatKey(log.note_key)}
             </p>
             {diff ? (
                 <pre className="overflow-hidden text-ellipsis whitespace-pre-wrap break-words rounded-md bg-black/5 p-2 font-mono text-xs text-muted-foreground">
@@ -211,13 +311,16 @@ export function LogsResults({
                                         Действие
                                     </th>
                                     <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
-                                        Объект
-                                    </th>
-                                    <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
                                         ID-участников
                                     </th>
                                     <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
-                                        Детали
+                                        Описание
+                                    </th>
+                                    <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
+                                        Название
+                                    </th>
+                                    <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
+                                        Теги
                                     </th>
                                 </tr>
                             </thead>
@@ -235,14 +338,18 @@ export function LogsResults({
                                         <td className="border-b border-black/10 px-4 py-3">
                                             {getActionLabel(log)}
                                         </td>
-                                        <td className="border-b border-black/10 px-4 py-3">
-                                            <LogEntityCell log={log} />
-                                        </td>
+
                                         <td className="border-b border-black/10 px-4 py-3">
                                             <LogActorsCell log={log} />
                                         </td>
                                         <td className="border-b border-black/10 px-4 py-3">
-                                            <LogDetailsCell log={log} />
+                                            <LogContentCell log={log} />
+                                        </td>
+                                        <td className="border-b border-black/10 px-4 py-3">
+                                            <LogTitleCell log={log} />
+                                        </td>
+                                        <td className="border-b border-black/10 px-4 py-3">
+                                            <LogTagsCell log={log} />
                                         </td>
                                     </tr>
                                 ))}
