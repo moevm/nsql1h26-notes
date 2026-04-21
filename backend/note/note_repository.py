@@ -20,6 +20,9 @@ class NoteRepository:
         result = self.collection.insert(note)
         note.update(result)
 
+        user = self.db.collection("users").get(note["user_ref"])
+        note["username"] = user["username"] if user else None
+
         return note
 
     def get(self, note_key: str) -> dict | None:
@@ -27,7 +30,10 @@ class NoteRepository:
         FOR n IN notes
             FILTER n._key == @key
             LIMIT 1
-            RETURN n
+            LET u = DOCUMENT("users", n.user_ref)
+            RETURN MERGE(n, {
+                username: u.username
+            })
         """
 
         cursor = self.db.aql.execute(
@@ -38,7 +44,7 @@ class NoteRepository:
         return next(cursor, None)
 
     def update(self, note_key: str, data: dict) -> dict | None:
-        query = """
+        update_query = """
         FOR n IN notes
             FILTER n._key == @key
             UPDATE n WITH @data IN notes
@@ -46,7 +52,7 @@ class NoteRepository:
         """
 
         cursor = self.db.aql.execute(
-            query,
+            update_query,
             bind_vars={
                 "key": note_key,
                 "data": {
@@ -55,7 +61,18 @@ class NoteRepository:
                 }
             }
         )
+        updated = next(cursor, None)
+        if not updated:
+            return None
 
+        get_query = """
+        LET n = DOCUMENT("notes", @key)
+        LET u = DOCUMENT("users", n.user_ref)
+        RETURN MERGE(n, {
+            username: u.username
+        })
+        """
+        cursor = self.db.aql.execute(get_query, bind_vars={"key": note_key})
         return next(cursor, None)
 
     def delete(self, note_key: str) -> bool:
@@ -120,8 +137,11 @@ class NoteRepository:
         query = f"""
         FOR n IN notes
             FILTER {" AND ".join(filters_list)}
+            LET u = DOCUMENT("users", n.user_ref)
             LIMIT @offset, @limit
-            RETURN n
+            RETURN MERGE(n, {{
+                username: u.username
+            }})
         """
 
         cursor = self.db.aql.execute(query, bind_vars=bind_vars)

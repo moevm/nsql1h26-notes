@@ -29,8 +29,8 @@ cd nsql1h26-notes
 docker compose up -d --build
 ```
 ### Тестирование
-Приложение будет доступно по адресу http://localhost:4173  
-Тестовые пользователи (значения из файла `.env`):
-- Администратор: `ADMIN_USERNAME` / `ADMIN_PASSWORD`
-- Обычный пользователь: `USER_USERNAME` / `USER_PASSWORD`
+Приложение будет доступно по адресу http://localhost:4173
+Логины и пароли тестовых пользователей:
+- Администратор: admin / adminpass
+- Пользователь: test_user / password
 

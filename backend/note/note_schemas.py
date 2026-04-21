@@ -35,6 +35,7 @@ class NotePatch(BaseModel):
 class NoteResponse(NoteBase):
     note_key: str
     user_ref: str
+    username: str
     created_at: str
     updated_at: str
 
