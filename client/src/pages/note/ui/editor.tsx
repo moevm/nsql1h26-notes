@@ -312,6 +312,12 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
                     {isEditing && loadedNote ? (
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                             <p>
+                                Создатель:{" "}
+                                <span className="text-foreground">
+                                    {loadedNote.username || "Неизвестно"}
+                                </span>
+                            </p>
+                            <p>
                                 Создана:{" "}
                                 <time dateTime={loadedNote.created_at}>
                                     {formatNoteTimestamp(

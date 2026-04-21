@@ -135,6 +135,24 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
 
     const availableActions = getActionOptions(draftFilters.type);
     const currentPage = Math.floor(appliedFilters.offset / appliedFilters.limit) + 1;
+    const hasNextPage = logs.length === appliedFilters.limit;
+    const pageNumbers = useMemo(() => {
+        const pages = new Set<number>([1, currentPage]);
+
+        if (currentPage > 1) {
+            pages.add(currentPage - 1);
+        }
+
+        if (currentPage > 2) {
+            pages.add(currentPage - 2);
+        }
+
+        if (hasNextPage) {
+            pages.add(currentPage + 1);
+        }
+
+        return Array.from(pages).sort((left, right) => left - right);
+    }, [currentPage, hasNextPage]);
 
     const updateField = (field: keyof LogFilters, value: string | number) => {
         setDraftFilters((current) => ({ ...current, [field]: value }));
@@ -179,6 +197,28 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
         setAppliedFilters((current) => ({
             ...current,
             offset: current.offset + current.limit,
+        }));
+    };
+
+    const goToPage = (page: number) => {
+        setAppliedFilters((current) => ({
+            ...current,
+            offset: (page - 1) * current.limit,
+        }));
+    };
+
+    const updateLimit = (limit: number) => {
+        const nextLimit = Math.max(1, Math.floor(limit));
+
+        setDraftFilters((current) => ({
+            ...current,
+            limit: nextLimit,
+            offset: 0,
+        }));
+        setAppliedFilters((current) => ({
+            ...current,
+            limit: nextLimit,
+            offset: 0,
         }));
     };
 
@@ -243,8 +283,12 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                     loading={loading}
                     error={error}
                     currentPage={currentPage}
+                    pageNumbers={pageNumbers}
+                    hasNextPage={hasNextPage}
                     limit={appliedFilters.limit}
                     offset={appliedFilters.offset}
+                    onGoToPage={goToPage}
+                    onLimitChange={updateLimit}
                     onPreviousPage={previousPage}
                     onNextPage={nextPage}
                 />

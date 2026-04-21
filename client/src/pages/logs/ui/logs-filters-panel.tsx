@@ -137,7 +137,7 @@ export function LogsFiltersPanel({
                         />
                     </div>
 
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <Input
                             type="datetime-local"
                             value={filters.from_date}
@@ -148,16 +148,6 @@ export function LogsFiltersPanel({
                             value={filters.to_date}
                             onChange={(event) => onUpdateField("to_date", event.target.value)}
                         />
-                        <select
-                            value={filters.limit}
-                            onChange={(event) => onUpdateField("limit", Number(event.target.value))}
-                            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        >
-                            <option value={25}>25 записей</option>
-                            <option value={50}>50 записей</option>
-                            <option value={100}>100 записей</option>
-                            <option value={200}>200 записей</option>
-                        </select>
                         <Button type="submit" disabled={loading}>
                             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                             Применить
