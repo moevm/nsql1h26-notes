@@ -42,6 +42,19 @@ function splitContent(content: string) {
     return lines.length ? lines : [""];
 }
 
+function formatNoteTimestamp(value: string) {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return new Intl.DateTimeFormat("ru-RU", {
+        dateStyle: "medium",
+        timeStyle: "short",
+    }).format(date);
+}
+
 export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
     const navigate = useNavigate();
     const { refreshNotes } = useNoteLayout();
@@ -295,6 +308,26 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
                                 {effectiveParentKey}
                             </span>
                         </p>
+                    ) : null}
+                    {isEditing && loadedNote ? (
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            <p>
+                                Создана:{" "}
+                                <time dateTime={loadedNote.created_at}>
+                                    {formatNoteTimestamp(
+                                        loadedNote.created_at,
+                                    )}
+                                </time>
+                            </p>
+                            <p>
+                                Последнее изменение:{" "}
+                                <time dateTime={loadedNote.updated_at}>
+                                    {formatNoteTimestamp(
+                                        loadedNote.updated_at,
+                                    )}
+                                </time>
+                            </p>
+                        </div>
                     ) : null}
                 </div>
 
