@@ -10,13 +10,11 @@ class ShareRepository:
     def get_by_note(self, note_key: str):
         query = """
         FOR s IN shares
-            FILTER s.note_key == @note_key
-            LIMIT 1
+            FILTER s.note_key == @note_key AND s.enabled == true
             RETURN s
         """
-
         cursor = self.db.aql.execute(query, bind_vars={"note_key": note_key})
-        return next(cursor, None)
+        return list(cursor)
 
     def get_by_share_key(self, share_key: str):
         query = """
@@ -25,45 +23,41 @@ class ShareRepository:
             LIMIT 1
             RETURN s
         """
-
         cursor = self.db.aql.execute(query, bind_vars={"share_key": share_key})
         return next(cursor, None)
 
     def create(self, note_key: str, role: str, created_by: str) -> dict:
+        share_key = str(uuid.uuid4())
         data = {
             "_key": str(uuid.uuid4()),
-            "share_key": str(uuid.uuid4()),
+            "share_key": share_key,
             "note_key": note_key,
             "role": role,
             "enabled": True,
             "created_by": created_by,
             "created_at": now_iso(),
         }
-
         self.collection.insert(data)
         return data
 
-    def update_role(self, note_key: str, role: str):
+    def disable_all_by_note(self, note_key: str):
         query = """
         FOR s IN shares
-            FILTER s.note_key == @note_key
-            UPDATE s WITH { role: @role, enabled: true } IN shares
+            FILTER s.note_key == @note_key AND s.enabled == true
+            UPDATE s WITH { enabled: false, disabled_at: @now } IN shares
             RETURN NEW
         """
-
         cursor = self.db.aql.execute(
-            query, bind_vars={"note_key": note_key, "role": role}
+            query, bind_vars={"note_key": note_key, "now": now_iso()}
         )
+        return list(cursor)
 
-        return next(cursor, None)
-
-    def disable(self, note_key: str):
+    def delete(self, share_key: str):
         query = """
         FOR s IN shares
-            FILTER s.note_key == @note_key
-            UPDATE s WITH { enabled: false } IN shares
-            RETURN NEW
+            FILTER s.share_key == @share_key
+            REMOVE s IN shares
+            RETURN OLD
         """
-
-        cursor = self.db.aql.execute(query, bind_vars={"note_key": note_key})
+        cursor = self.db.aql.execute(query, bind_vars={"share_key": share_key})
         return next(cursor, None)

@@ -1,16 +1,19 @@
+from typing import Optional
+
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from auth.auth_service import AuthService
 from auth.token_service import TokenService
 from auth.auth_schemas import UserToken
+from model.user import User
 from user.user_service import UserService
 from user.user_dependencies import get_user_service
 from log.log_service import LogService
 from log.log_dependencies import get_log_service
 from core.security import decode_token
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 def get_auth_service(
@@ -59,3 +62,18 @@ def get_refresh_token_payload(payload: dict = Depends(get_token_payload)) -> dic
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     return payload
+
+
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    user_service: UserService = Depends(get_user_service),
+) -> Optional[User]:
+    if not credentials:
+        return None
+    try:
+        payload = decode_token(credentials.credentials)
+    except Exception:
+        return None
+    if payload.type != "access" or not payload.user_key:
+        return None
+    return user_service.get_user(payload.user_key)

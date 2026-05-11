@@ -3,6 +3,7 @@ from typing import List
 from fastapi import HTTPException
 
 from auth.auth_schemas import UserRole
+from share.share_schemas import ShareRole
 from model.user import User
 from note.note_repository import NoteRepository
 from note.note_schemas import (
@@ -56,7 +57,7 @@ class NoteService:
         self,
         note: dict,
         user: User,
-        required_role: str = "read",
+        required_role: ShareRole = ShareRole.READ,
     ):
         if user.role == UserRole.ADMIN:
             return
@@ -65,20 +66,21 @@ class NoteService:
         permission = self.permission_repo.get(user.user_key, note["_key"])
         if not permission:
             raise HTTPException(403, "Access denied")
-        role = permission["role"]
-        if required_role == "read":
-            if role not in ["read", "write"]:
-                raise HTTPException(403, "Access denied")
 
-        elif required_role == "write":
-            if role != "write":
+        role = ShareRole(permission["role"])
+
+        if required_role == ShareRole.READ:
+            if role not in (ShareRole.READ, ShareRole.WRITE):
+                raise HTTPException(403, "Access denied")
+        elif required_role == ShareRole.WRITE:
+            if role != ShareRole.WRITE:
                 raise HTTPException(403, "Write access denied")
 
     def _get_note_with_access(
         self,
         note_key: str,
         user: User,
-        required_role: str = "read",
+        required_role: ShareRole = ShareRole.READ,
     ) -> dict:
         note = self.repo.get(note_key)
 
@@ -111,7 +113,7 @@ class NoteService:
         if not parent:
             raise HTTPException(400, "Parent note does not exist")
 
-        self._check_note_access(parent, user, "write")
+        self._check_note_access(parent, user, ShareRole.WRITE)
 
         if note_key:
             if parent_key == note_key:
@@ -141,12 +143,12 @@ class NoteService:
         return response_note
 
     def get_note(self, user: User, note_key: str) -> NoteResponse:
-        note = self._get_note_with_access(note_key, user, "read")
+        note = self._get_note_with_access(note_key, user, ShareRole.READ)
 
         return self._to_response(note)
 
     def patch_note(self, note_key: str, user: User, data: NotePatch) -> NoteResponse:
-        note = self._get_note_with_access(note_key, user, "write")
+        note = self._get_note_with_access(note_key, user, ShareRole.WRITE)
         before = self._to_snapshot(note)
         payload = data.model_dump(exclude_unset=True)
         if "parent_key" in payload and payload["parent_key"] is not None:
@@ -168,7 +170,7 @@ class NoteService:
         return self._to_response(updated)
 
     def replace_note(self, note_key: str, user: User, data: NotePut) -> NoteResponse:
-        note = self._get_note_with_access(note_key, user, "write")
+        note = self._get_note_with_access(note_key, user, ShareRole.WRITE)
         before = self._to_snapshot(note)
         if data.parent_key is not None:
             self._validate_parent(data.parent_key, user, note_key)
@@ -189,7 +191,7 @@ class NoteService:
         return self._to_response(updated)
 
     def delete_note(self, note_key: str, user: User) -> None:
-        note = self._get_note_with_access(note_key, user, "write")
+        note = self._get_note_with_access(note_key, user, ShareRole.WRITE)
         before = self._to_snapshot(note)
         self.log_service.create_note_log(
             user.user_key,
