@@ -30,6 +30,7 @@ class ShareService:
 
         if existing:
             share = self.share_repo.update_role(note_key, role)
+            self.perm_repo.update_role_by_note(note_key, role)
         else:
             share = self.share_repo.create(note_key, role, user.user_key)
 
@@ -53,7 +54,6 @@ class ShareService:
             self.perm_repo.upsert(
                 user_key=user.user_key, note_key=note["_key"], role=share["role"]
             )
-        print("+")
         return {
             "note_key": note["_key"],
             "user_ref": note["user_ref"],
@@ -70,7 +70,12 @@ class ShareService:
     def disable_share(self, user, note_key: str):
         note = self.note_repo.get(note_key)
 
+        if not note:
+            raise HTTPException(404, "Note not found")
+
         if note["user_ref"] != user.user_key:
             raise HTTPException(403)
+
+        self.perm_repo.delete_by_note(note_key)
 
         return self.share_repo.disable(note_key)

@@ -26,7 +26,6 @@ def get_shared_note(
     service: ShareService = Depends(get_share_service),
     user: User = Depends(get_current_user),
 ):
-    print(user)
     return service.get_shared_note(share_key, user)
 
 

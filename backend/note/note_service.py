@@ -90,7 +90,7 @@ class NoteService:
         if not note:
             raise HTTPException(404, "Note not found")
 
-        print(self._check_note_access(note, user, required_role))
+        self._check_note_access(note, user, required_role)
 
         return note
 
