@@ -60,17 +60,12 @@ class NoteService:
     ):
         if user.role == UserRole.ADMIN:
             return
-
         if note["user_ref"] == user.user_key:
             return
-
         permission = self.permission_repo.get(user.user_key, note["_key"])
-
         if not permission:
             raise HTTPException(403, "Access denied")
-
         role = permission["role"]
-
         if required_role == "read":
             if role not in ["read", "write"]:
                 raise HTTPException(403, "Access denied")
@@ -96,16 +91,13 @@ class NoteService:
 
     def _check_cycle(self, parent_key: str, note_key: str):
         current = parent_key
-
         while current:
             if current == note_key:
                 raise HTTPException(400, "Cycle detected in note hierarchy")
 
             parent = self.repo.get(current)
-
             if not parent:
                 break
-
             current = parent.get("parent_key")
 
     def _validate_parent(
@@ -132,9 +124,7 @@ class NoteService:
             self._validate_parent(data.parent_key, user)
 
         note = self.repo.create({**data.model_dump(), "user_ref": user.user_key})
-
         response_note = self._to_response(note)
-
         self.log_service.create_note_log(
             user.user_key,
             NotesLogCreate(
@@ -156,23 +146,15 @@ class NoteService:
         return self._to_response(note)
 
     def patch_note(self, note_key: str, user: User, data: NotePatch) -> NoteResponse:
-
         note = self._get_note_with_access(note_key, user, "write")
-
         before = self._to_snapshot(note)
-
         payload = data.model_dump(exclude_unset=True)
-
         if "parent_key" in payload and payload["parent_key"] is not None:
             self._validate_parent(payload["parent_key"], user, note_key)
-
         updated = self.repo.update(note_key, payload)
-
         if not updated:
             raise HTTPException(404, "Note not found")
-
         after = self._to_snapshot(updated)
-
         self.log_service.create_note_log(
             user.user_key,
             NotesLogCreate(
@@ -183,25 +165,17 @@ class NoteService:
                 diff="",
             ),
         )
-
         return self._to_response(updated)
 
     def replace_note(self, note_key: str, user: User, data: NotePut) -> NoteResponse:
-
         note = self._get_note_with_access(note_key, user, "write")
-
         before = self._to_snapshot(note)
-
         if data.parent_key is not None:
             self._validate_parent(data.parent_key, user, note_key)
-
         updated = self.repo.update(note_key, data.model_dump())
-
         if not updated:
             raise HTTPException(404, "Note not found")
-
         after = self._to_snapshot(updated)
-
         self.log_service.create_note_log(
             user.user_key,
             NotesLogCreate(
@@ -212,14 +186,11 @@ class NoteService:
                 diff="",
             ),
         )
-
         return self._to_response(updated)
 
     def delete_note(self, note_key: str, user: User) -> None:
         note = self._get_note_with_access(note_key, user, "write")
-
         before = self._to_snapshot(note)
-
         self.log_service.create_note_log(
             user.user_key,
             NotesLogCreate(
@@ -232,14 +203,10 @@ class NoteService:
                 diff="",
             ),
         )
-
         ok = self.repo.delete(note_key)
-
         if not ok:
             raise HTTPException(404, "Note not found")
 
     def get_user_notes(self, user_ref: str, filters: NoteFilter) -> List[NoteResponse]:
-
         notes = self.repo.get_by_user(user_ref, filters)
-
         return [self._to_response(n) for n in notes]
