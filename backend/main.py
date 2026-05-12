@@ -7,6 +7,7 @@ from db.database import ensure_db, ensure_admin_exists
 from user import user_controller
 from note import note_controller
 from log import log_controller
+from share import share_controller
 
 
 @asynccontextmanager
@@ -24,3 +25,4 @@ app.include_router(auth_controller.router)
 app.include_router(user_controller.router)
 app.include_router(note_controller.router)
 app.include_router(log_controller.router)
+app.include_router(share_controller.router)

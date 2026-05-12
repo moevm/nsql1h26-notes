@@ -2,7 +2,11 @@ from typing import List, Dict
 
 from arango import ArangoClient
 from arango.database import StandardDatabase
-from arango.exceptions import CollectionCreateError, DatabaseCreateError, ServerConnectionError
+from arango.exceptions import (
+    CollectionCreateError,
+    DatabaseCreateError,
+    ServerConnectionError,
+)
 from passlib.context import CryptContext
 
 from auth.auth_schemas import UserRole
@@ -16,7 +20,7 @@ settings = get_settings()
 client = ArangoClient(hosts=settings.database_url)
 db: StandardDatabase | None = None
 
-COLLECTIONS: tuple[str, ...] = ("users", "notes","logs")
+COLLECTIONS: tuple[str, ...] = ("users", "notes", "logs", "shares", "permissions")
 MAX_INIT_ATTEMPTS = 30
 RETRY_DELAY_SECONDS = 2.0
 DEBUG_USERS: List[Dict] = [
@@ -29,8 +33,9 @@ DEBUG_USERS: List[Dict] = [
         "username": settings.USER_USERNAME,
         "password": settings.USER_PASSWORD,
         "role": UserRole.USER.value,
-    }
+    },
 ]
+
 
 def ensure_db(
     max_attempts: int = MAX_INIT_ATTEMPTS,
@@ -88,6 +93,7 @@ def ensure_db(
         "ArangoDB is unavailable after repeated startup attempts"
     ) from last_error
 
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -112,9 +118,13 @@ def ensure_admin_exists(db: StandardDatabase):
                 "created_at": now_iso(),
             }
             users.insert(user_data)
-            print(f"[DB INIT] Created {debug_user['role']} user: {debug_user['username']}")
+            print(
+                f"[DB INIT] Created {debug_user['role']} user: {debug_user['username']}"
+            )
         else:
-            print(f"[DB INIT] {debug_user['role']} user already exists: {debug_user['username']}")
+            print(
+                f"[DB INIT] {debug_user['role']} user already exists: {debug_user['username']}"
+            )
 
 
 def get_db():

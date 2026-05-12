@@ -2,9 +2,11 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+
 class UserRole(str, Enum):
-    ADMIN = 'admin'
-    USER = 'user'
+    ADMIN = "admin"
+    USER = "user"
+
 
 class RegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50)
@@ -20,3 +22,11 @@ class LoginRequest(BaseModel):
 class AuthResponse(BaseModel):
     access_token: str
     refresh_token: str
+
+
+class UserToken(BaseModel):
+    user_key: str
+    username: str
+    role: UserRole
+    type: str
+    jti: str | None = None
