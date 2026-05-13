@@ -3,44 +3,29 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from db.database import COLLECTIONS
+from backup.backup_repository import BackupRepository
 from backup.backup_schemas import BackupSchema
+from db.database import COLLECTIONS
 
 
 class BackupService:
-    def __init__(self, db):
-        self.db = db
+    def __init__(self, repo: BackupRepository):
+        self.repo = repo
 
     def export_backup(self):
-        result = {
+        return {
             "version": 1,
             "exported_at": datetime.now(timezone.utc).isoformat(),
-            "collections": {},
+            "collections": self.repo.get_all_collections_docs(),
         }
-
-        for collection_name in COLLECTIONS:
-            collection = self.db.collection(collection_name)
-
-            docs = list(collection.all())
-
-            for doc in docs:
-                doc.pop("_rev", None)
-
-            result["collections"][collection_name] = docs
-
-        return result
 
     def restore_backup(self, data: dict):
         backup = self._validate_backup(data)
 
-        for collection_name in COLLECTIONS:
-            self.db.collection(collection_name).truncate()
+        self.repo.truncate_all()
 
-        for collection_name in COLLECTIONS:
-            docs = backup.collections.get(collection_name, [])
-
-            if docs:
-                self.db.collection(collection_name).import_bulk(docs)
+        for collection_name, docs in backup.collections.items():
+            self.repo.bulk_insert(collection_name, docs)
 
     def _validate_backup(self, data: dict) -> BackupSchema:
         try:
