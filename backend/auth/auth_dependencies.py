@@ -5,7 +5,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from auth.auth_service import AuthService
 from auth.token_service import TokenService
-from auth.auth_schemas import UserToken
+from auth.auth_schemas import UserRole, UserToken
 from model.user import User
 from user.user_service import UserService
 from user.user_dependencies import get_user_service
@@ -28,8 +28,14 @@ def get_token_service() -> TokenService:
 
 
 def get_token_payload(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> UserToken:
+    if not credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated",
+        )
+
     return decode_token(credentials.credentials)
 
 
@@ -54,6 +60,17 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
+    return user
+
+
+def require_admin(
+    user: User = Depends(get_current_user),
+) -> User:
+    if user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required",
+        )
     return user
 
 

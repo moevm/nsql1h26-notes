@@ -7,8 +7,7 @@ from auth.auth_dependencies import require_admin
 from backup.backup_dependencies import get_backup_service
 from backup.backup_service import BackupService
 
-
-router = APIRouter(prefix="/backup", tags=["backup"])
+router = APIRouter(prefix="/api/backup", tags=["backup"])
 
 
 @router.get("/export")
@@ -21,11 +20,7 @@ def export_backup(
     return Response(
         content=json.dumps(data, ensure_ascii=False, indent=2),
         media_type="application/json",
-        headers={
-            "Content-Disposition": (
-                "attachment; filename=backup.json"
-            )
-        },
+        headers={"Content-Disposition": ("attachment; filename=backup.json")},
     )
 
 
@@ -41,6 +36,4 @@ async def import_backup(
 
     service.restore_backup(data)
 
-    return {
-        "status": "ok"
-    }
+    return {"status": "ok"}
