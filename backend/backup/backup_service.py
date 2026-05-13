@@ -1,5 +1,8 @@
 from datetime import datetime, timezone
 
+from fastapi import HTTPException
+from pydantic import ValidationError
+
 from db.database import COLLECTIONS
 from backup.backup_schemas import BackupSchema
 
@@ -28,9 +31,7 @@ class BackupService:
         return result
     
     def restore_backup(self, data: dict):
-        backup = BackupSchema.model_validate(data)
-
-        self._validate_collections(backup)
+        backup = self._validate_backup(data)
 
         for collection_name in COLLECTIONS:
             self.db.collection(collection_name).truncate()
@@ -41,9 +42,23 @@ class BackupService:
             if docs:
                 self.db.collection(collection_name).import_bulk(docs)
 
-    def _validate_collections(self, backup: BackupSchema):
-        for collection_name in COLLECTIONS:
-            if collection_name not in backup.collections:
-                raise ValueError(
-                    f"Collection '{collection_name}' is missing"
-                )
+    def _validate_backup(self, data: dict) -> BackupSchema:
+        try:
+            backup = BackupSchema.model_validate(data)
+
+            if backup.version != 1:
+                raise ValueError("Unsupported backup version")
+
+            for collection_name in self.REQUIRED_COLLECTIONS:
+                if collection_name not in backup.collections:
+                    raise ValueError(
+                        f"Missing collection: {collection_name}"
+                    )
+
+            return backup
+
+        except (ValidationError, ValueError) as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid backup: {str(e)}"
+            )
