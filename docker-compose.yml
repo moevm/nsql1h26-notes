@@ -47,7 +47,7 @@ services:
     ports:
       - "127.0.0.1:4173:4173"
     env_file:
-      - .en
+      - .env
     networks:
       - frontend_public
     depends_on:
