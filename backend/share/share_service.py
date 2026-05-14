@@ -120,7 +120,7 @@ class ShareService:
                 granted_by_key=user.user_key,
                 granted_by_username=user.username,
                 granted_to_key=perm["user_key"],
-                granted_to_username=granted_to_user["username"],
+                granted_to_username=granted_to_user.username,
                 data=PermissionLogCreate(
                     action=PermissionAction.REVOKE,
                     note_key=note["_key"],

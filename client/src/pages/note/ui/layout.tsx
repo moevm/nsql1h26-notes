@@ -29,6 +29,7 @@ import {
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
 import { Header } from "@/shared/layout/Header";
+import { clearRefreshToken, clearStoredAccessToken } from "@/shared/lib/token-storage";
 
 const normalizeFilters = (filters: NoteFilters): NoteFilters => ({
     ...filters,
@@ -223,6 +224,11 @@ export const NotePageLayout = () => {
             left: rect.left,
         });
     };
+    const logout = () => {
+        clearStoredAccessToken();
+        clearRefreshToken();
+        navigate("/auth/signin", { replace: true });
+    };
 
     const createChild = () => {
         if (!contextMenu) {
@@ -290,6 +296,13 @@ export const NotePageLayout = () => {
                             title: "Новая заметка",
                             onClick: () => navigate("/notes/new"),
                             variant: "outline",
+                        },
+                        {
+                            title: "Выйти",
+                            onClick: logout,
+                            variant: "outline" as const,
+                            className:
+                                "border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600",
                         },
                     ]}
                 />

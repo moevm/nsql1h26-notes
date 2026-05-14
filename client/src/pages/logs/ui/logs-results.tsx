@@ -90,8 +90,8 @@ function LogEntityCell({ log }: { log: Log }) {
         return (
             <div className="min-w-0">
                 <p className="font-medium">Новый пользователь</p>
-                <p className="mt-1 font-mono text-xs text-muted-foreground" title={log.user_key}>
-                    {formatKey(log.user_key)}
+                <p className="mt-1 font-mono text-xs text-muted-foreground" title={log.username}>
+                    {formatKey(log.username)}
                 </p>
             </div>
         );
@@ -311,7 +311,7 @@ export function LogsResults({
                                         Действие
                                     </th>
                                     <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
-                                        ID-участников
+                                        Участники
                                     </th>
                                     <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
                                         Описание

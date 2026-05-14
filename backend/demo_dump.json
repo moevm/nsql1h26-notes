@@ -1,0 +1,801 @@
+{
+  "version": 1,
+  "exported_at": "2026-05-14T14:27:26.798284+00:00",
+  "collections": {
+    "users": [
+      {
+        "_key": "208",
+        "_id": "users/208",
+        "username": "admin",
+        "hashed_password": "$2b$12$3TMFDVYA16SIUoxc2yHZReTp0n2rtfnZXxrdwz.QfsH9Jcu1y2lQK",
+        "role": "admin",
+        "created_at": "2026-05-14T14:10:27+00:00"
+      },
+      {
+        "_key": "212",
+        "_id": "users/212",
+        "username": "test_user",
+        "hashed_password": "$2b$12$sKzDlygMC5bKO6qRilk5AeBQ34OZcteFBffl4tUAH6hj9aFc5/WOu",
+        "role": "user",
+        "created_at": "2026-05-14T14:10:27+00:00"
+      },
+      {
+        "_key": "226",
+        "_id": "users/226",
+        "username": "bob",
+        "hashed_password": "$2b$12$mcJxHJAsZ7NUJ5x51di1c.7.dy3OGPk60/IIr2AjCawRnh7stGmj2",
+        "created_at": "2026-05-14T14:10:50+00:00",
+        "role": "user"
+      },
+      {
+        "_key": "393",
+        "_id": "users/393",
+        "username": "alice",
+        "hashed_password": "$2b$12$PjX3wF2RaUMYnx57vdcUK.0KFoTdzfoDEu9ka.l/L8pGoZA8HdSIO",
+        "created_at": "2026-05-14T14:12:44+00:00",
+        "role": "user"
+      }
+    ],
+    "notes": [
+      {
+        "_key": "254",
+        "_id": "notes/254",
+        "title": "Заметка 1",
+        "content": "Заметка о природе",
+        "parent_key": null,
+        "tags": [
+          "природа",
+          "жизнь"
+        ],
+        "user_ref": "226",
+        "created_at": "2026-05-14T14:11:16+00:00",
+        "updated_at": "2026-05-14T14:11:16+00:00"
+      },
+      {
+        "_key": "301",
+        "_id": "notes/301",
+        "title": "Подзаметка",
+        "content": "Заметка об озере и шашлыках",
+        "parent_key": "254",
+        "tags": [
+          "озеро",
+          "шашлыки"
+        ],
+        "user_ref": "226",
+        "created_at": "2026-05-14T14:12:04+00:00",
+        "updated_at": "2026-05-14T14:12:14+00:00"
+      },
+      {
+        "_key": "541",
+        "_id": "notes/541",
+        "title": "Javascript",
+        "content": "Заметка о JSvdsvfvdfsvds",
+        "parent_key": null,
+        "tags": [
+          "js"
+        ],
+        "user_ref": "393",
+        "created_at": "2026-05-14T14:14:11+00:00",
+        "updated_at": "2026-05-14T14:19:20+00:00"
+      },
+      {
+        "_key": "459",
+        "_id": "notes/459",
+        "title": "Python",
+        "content": "Заметка о Pythonvf",
+        "parent_key": null,
+        "tags": [
+          "python"
+        ],
+        "user_ref": "393",
+        "created_at": "2026-05-14T14:13:38+00:00",
+        "updated_at": "2026-05-14T14:20:06+00:00"
+      },
+      {
+        "_key": "1458",
+        "_id": "notes/1458",
+        "title": "Принципы SOLID",
+        "content": "Архитектурные принципы",
+        "parent_key": null,
+        "tags": [
+          "solid"
+        ],
+        "user_ref": "208",
+        "created_at": "2026-05-14T14:20:53+00:00",
+        "updated_at": "2026-05-14T14:20:53+00:00"
+      },
+      {
+        "_key": "1518",
+        "_id": "notes/1518",
+        "title": "Еще одна заметка",
+        "content": "Текст заметки",
+        "parent_key": null,
+        "tags": [
+          "тег1"
+        ],
+        "user_ref": "208",
+        "created_at": "2026-05-14T14:21:42+00:00",
+        "updated_at": "2026-05-14T14:21:42+00:00"
+      },
+      {
+        "_key": "1564",
+        "_id": "notes/1564",
+        "title": "Итерация 3",
+        "content": "Заметка по mse",
+        "parent_key": null,
+        "tags": [
+          "mse"
+        ],
+        "user_ref": "208",
+        "created_at": "2026-05-14T14:22:36+00:00",
+        "updated_at": "2026-05-14T14:22:36+00:00"
+      },
+      {
+        "_key": "1611",
+        "_id": "notes/1611",
+        "title": "Single Responsibility",
+        "content": "Принцип единственной ответственности",
+        "parent_key": "1458",
+        "tags": [
+          "solid"
+        ],
+        "user_ref": "208",
+        "created_at": "2026-05-14T14:23:09+00:00",
+        "updated_at": "2026-05-14T14:23:09+00:00"
+      },
+      {
+        "_key": "1650",
+        "_id": "notes/1650",
+        "title": "Open/Closed Principle",
+        "content": "Принцип открытости/закрытости",
+        "parent_key": "1458",
+        "tags": [
+          "solid"
+        ],
+        "user_ref": "208",
+        "created_at": "2026-05-14T14:23:30+00:00",
+        "updated_at": "2026-05-14T14:23:30+00:00"
+      },
+      {
+        "_key": "1744",
+        "_id": "notes/1744",
+        "title": "Interface Segregation",
+        "content": "Принцип разделения интерфейсов",
+        "parent_key": "1458",
+        "tags": [
+          "solid"
+        ],
+        "user_ref": "208",
+        "created_at": "2026-05-14T14:24:51+00:00",
+        "updated_at": "2026-05-14T14:24:51+00:00"
+      },
+      {
+        "_key": "1697",
+        "_id": "notes/1697",
+        "title": "Liskov Substitution",
+        "content": "Принцип подстановки Лисков. Изменение от другого пользователя",
+        "parent_key": "1458",
+        "tags": [
+          "solid"
+        ],
+        "user_ref": "208",
+        "created_at": "2026-05-14T14:24:12+00:00",
+        "updated_at": "2026-05-14T14:27:16+00:00"
+      }
+    ],
+    "logs": [
+      {
+        "_key": "228",
+        "_id": "logs/228",
+        "user_key": "226",
+        "username": "bob",
+        "type": "registration",
+        "action": "register",
+        "created_at": "2026-05-14T14:10:50+00:00"
+      },
+      {
+        "_key": "257",
+        "_id": "logs/257",
+        "action": "create",
+        "note_key": "254",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Заметка 1",
+          "content": "Заметка о природе",
+          "parent_key": null,
+          "tags": [
+            "природа",
+            "жизнь"
+          ]
+        },
+        "diff": "",
+        "user_key": "226",
+        "username": "bob",
+        "type": "note",
+        "created_at": "2026-05-14T14:11:16+00:00"
+      },
+      {
+        "_key": "304",
+        "_id": "logs/304",
+        "action": "create",
+        "note_key": "301",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Подзаметка",
+          "content": "Заметка об озере",
+          "parent_key": "254",
+          "tags": [
+            "озеро",
+            "шашлыки"
+          ]
+        },
+        "diff": "",
+        "user_key": "226",
+        "username": "bob",
+        "type": "note",
+        "created_at": "2026-05-14T14:12:04+00:00"
+      },
+      {
+        "_key": "353",
+        "_id": "logs/353",
+        "action": "update",
+        "note_key": "301",
+        "state_before": {
+          "title": "Подзаметка",
+          "content": "Заметка об озере",
+          "parent_key": "254",
+          "tags": [
+            "озеро",
+            "шашлыки"
+          ]
+        },
+        "state_after": {
+          "title": "Подзаметка",
+          "content": "Заметка об озере и шашлыках",
+          "parent_key": "254",
+          "tags": [
+            "озеро",
+            "шашлыки"
+          ]
+        },
+        "diff": "",
+        "user_key": "226",
+        "username": "bob",
+        "type": "note",
+        "created_at": "2026-05-14T14:12:14+00:00"
+      },
+      {
+        "_key": "395",
+        "_id": "logs/395",
+        "user_key": "393",
+        "username": "alice",
+        "type": "registration",
+        "action": "register",
+        "created_at": "2026-05-14T14:12:44+00:00"
+      },
+      {
+        "_key": "428",
+        "_id": "logs/428",
+        "action": "create",
+        "note_key": "425",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Языки программирования",
+          "content": "Изучение языков программирования",
+          "parent_key": null,
+          "tags": [
+            "languages"
+          ]
+        },
+        "diff": "",
+        "user_key": "393",
+        "username": "alice",
+        "type": "note",
+        "created_at": "2026-05-14T14:13:23+00:00"
+      },
+      {
+        "_key": "462",
+        "_id": "logs/462",
+        "action": "create",
+        "note_key": "459",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Python",
+          "content": "Заметка о Python",
+          "parent_key": null,
+          "tags": [
+            "python"
+          ]
+        },
+        "diff": "",
+        "user_key": "393",
+        "username": "alice",
+        "type": "note",
+        "created_at": "2026-05-14T14:13:38+00:00"
+      },
+      {
+        "_key": "508",
+        "_id": "logs/508",
+        "action": "delete",
+        "note_key": "425",
+        "state_before": {
+          "title": "Языки программирования",
+          "content": "Изучение языков программирования",
+          "parent_key": null,
+          "tags": [
+            "languages"
+          ]
+        },
+        "state_after": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "diff": "",
+        "user_key": "393",
+        "username": "alice",
+        "type": "note",
+        "created_at": "2026-05-14T14:13:56+00:00"
+      },
+      {
+        "_key": "544",
+        "_id": "logs/544",
+        "action": "create",
+        "note_key": "541",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Javascript",
+          "content": "Заметка о JS",
+          "parent_key": null,
+          "tags": [
+            "js"
+          ]
+        },
+        "diff": "",
+        "user_key": "393",
+        "username": "alice",
+        "type": "note",
+        "created_at": "2026-05-14T14:14:11+00:00"
+      },
+      {
+        "_key": "639",
+        "_id": "logs/639",
+        "action": "update",
+        "note_key": "541",
+        "state_before": {
+          "title": "Javascript",
+          "content": "Заметка о JS",
+          "parent_key": null,
+          "tags": [
+            "js"
+          ]
+        },
+        "state_after": {
+          "title": "Javascript",
+          "content": "Заметка о JSvdsvf",
+          "parent_key": null,
+          "tags": [
+            "js"
+          ]
+        },
+        "diff": "",
+        "user_key": "393",
+        "username": "alice",
+        "type": "note",
+        "created_at": "2026-05-14T14:14:30+00:00"
+      },
+      {
+        "_key": "821",
+        "_id": "logs/821",
+        "action": "grant",
+        "note_key": "541",
+        "before_permission_type": "none",
+        "after_permission_type": "read",
+        "granted_by_key": "393",
+        "granted_to_key": "226",
+        "type": "permission",
+        "granted_by_username": "alice",
+        "granted_to_username": "bob",
+        "created_at": "2026-05-14T14:15:55+00:00"
+      },
+      {
+        "_key": "1221",
+        "_id": "logs/1221",
+        "action": "grant",
+        "note_key": "541",
+        "before_permission_type": "none",
+        "after_permission_type": "write",
+        "granted_by_key": "393",
+        "granted_to_key": "226",
+        "type": "permission",
+        "granted_by_username": "alice",
+        "granted_to_username": "bob",
+        "created_at": "2026-05-14T14:19:17+00:00"
+      },
+      {
+        "_key": "1271",
+        "_id": "logs/1271",
+        "action": "update",
+        "note_key": "541",
+        "state_before": {
+          "title": "Javascript",
+          "content": "Заметка о JSvdsvf",
+          "parent_key": null,
+          "tags": [
+            "js"
+          ]
+        },
+        "state_after": {
+          "title": "Javascript",
+          "content": "Заметка о JSvdsvfvdfsvds",
+          "parent_key": null,
+          "tags": [
+            "js"
+          ]
+        },
+        "diff": "",
+        "user_key": "226",
+        "username": "bob",
+        "type": "note",
+        "created_at": "2026-05-14T14:19:20+00:00"
+      },
+      {
+        "_key": "1368",
+        "_id": "logs/1368",
+        "action": "revoke",
+        "note_key": "541",
+        "before_permission_type": "write",
+        "after_permission_type": "none",
+        "granted_by_key": "393",
+        "granted_to_key": "226",
+        "type": "permission",
+        "granted_by_username": "alice",
+        "granted_to_username": "bob",
+        "created_at": "2026-05-14T14:19:59+00:00"
+      },
+      {
+        "_key": "1405",
+        "_id": "logs/1405",
+        "action": "update",
+        "note_key": "459",
+        "state_before": {
+          "title": "Python",
+          "content": "Заметка о Python",
+          "parent_key": null,
+          "tags": [
+            "python"
+          ]
+        },
+        "state_after": {
+          "title": "Python",
+          "content": "Заметка о Pythonvf",
+          "parent_key": null,
+          "tags": [
+            "python"
+          ]
+        },
+        "diff": "",
+        "user_key": "393",
+        "username": "alice",
+        "type": "note",
+        "created_at": "2026-05-14T14:20:06+00:00"
+      },
+      {
+        "_key": "1461",
+        "_id": "logs/1461",
+        "action": "create",
+        "note_key": "1458",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Принципы SOLID",
+          "content": "Архитектурные принципы",
+          "parent_key": null,
+          "tags": [
+            "solid"
+          ]
+        },
+        "diff": "",
+        "user_key": "208",
+        "username": "admin",
+        "type": "note",
+        "created_at": "2026-05-14T14:20:53+00:00"
+      },
+      {
+        "_key": "1521",
+        "_id": "logs/1521",
+        "action": "create",
+        "note_key": "1518",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Еще одна заметка",
+          "content": "Текст заметки",
+          "parent_key": null,
+          "tags": [
+            "тег1"
+          ]
+        },
+        "diff": "",
+        "user_key": "208",
+        "username": "admin",
+        "type": "note",
+        "created_at": "2026-05-14T14:21:42+00:00"
+      },
+      {
+        "_key": "1567",
+        "_id": "logs/1567",
+        "action": "create",
+        "note_key": "1564",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Итерация 3",
+          "content": "Заметка по mse",
+          "parent_key": null,
+          "tags": [
+            "mse"
+          ]
+        },
+        "diff": "",
+        "user_key": "208",
+        "username": "admin",
+        "type": "note",
+        "created_at": "2026-05-14T14:22:36+00:00"
+      },
+      {
+        "_key": "1614",
+        "_id": "logs/1614",
+        "action": "create",
+        "note_key": "1611",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Single Responsibility",
+          "content": "Принцип единственной ответственности",
+          "parent_key": "1458",
+          "tags": [
+            "solid"
+          ]
+        },
+        "diff": "",
+        "user_key": "208",
+        "username": "admin",
+        "type": "note",
+        "created_at": "2026-05-14T14:23:09+00:00"
+      },
+      {
+        "_key": "1653",
+        "_id": "logs/1653",
+        "action": "create",
+        "note_key": "1650",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Open/Closed Principle",
+          "content": "Принцип открытости/закрытости",
+          "parent_key": "1458",
+          "tags": [
+            "solid"
+          ]
+        },
+        "diff": "",
+        "user_key": "208",
+        "username": "admin",
+        "type": "note",
+        "created_at": "2026-05-14T14:23:30+00:00"
+      },
+      {
+        "_key": "1700",
+        "_id": "logs/1700",
+        "action": "create",
+        "note_key": "1697",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Liskov Substitution",
+          "content": "Принцип подстановки Лисков",
+          "parent_key": "1458",
+          "tags": [
+            "solid"
+          ]
+        },
+        "diff": "",
+        "user_key": "208",
+        "username": "admin",
+        "type": "note",
+        "created_at": "2026-05-14T14:24:12+00:00"
+      },
+      {
+        "_key": "1747",
+        "_id": "logs/1747",
+        "action": "create",
+        "note_key": "1744",
+        "state_before": {
+          "title": "",
+          "content": "",
+          "parent_key": null,
+          "tags": []
+        },
+        "state_after": {
+          "title": "Interface Segregation",
+          "content": "Принцип разделения интерфейсов",
+          "parent_key": "1458",
+          "tags": [
+            "solid"
+          ]
+        },
+        "diff": "",
+        "user_key": "208",
+        "username": "admin",
+        "type": "note",
+        "created_at": "2026-05-14T14:24:51+00:00"
+      },
+      {
+        "_key": "2049",
+        "_id": "logs/2049",
+        "action": "grant",
+        "note_key": "1744",
+        "before_permission_type": "none",
+        "after_permission_type": "read",
+        "granted_by_key": "208",
+        "granted_to_key": "393",
+        "type": "permission",
+        "granted_by_username": "admin",
+        "granted_to_username": "alice",
+        "created_at": "2026-05-14T14:26:32+00:00"
+      },
+      {
+        "_key": "2180",
+        "_id": "logs/2180",
+        "action": "grant",
+        "note_key": "1697",
+        "before_permission_type": "none",
+        "after_permission_type": "write",
+        "granted_by_key": "208",
+        "granted_to_key": "393",
+        "type": "permission",
+        "granted_by_username": "admin",
+        "granted_to_username": "alice",
+        "created_at": "2026-05-14T14:27:03+00:00"
+      },
+      {
+        "_key": "2230",
+        "_id": "logs/2230",
+        "action": "update",
+        "note_key": "1697",
+        "state_before": {
+          "title": "Liskov Substitution",
+          "content": "Принцип подстановки Лисков",
+          "parent_key": "1458",
+          "tags": [
+            "solid"
+          ]
+        },
+        "state_after": {
+          "title": "Liskov Substitution",
+          "content": "Принцип подстановки Лисков. Изменение от другого пользователя",
+          "parent_key": "1458",
+          "tags": [
+            "solid"
+          ]
+        },
+        "diff": "",
+        "user_key": "393",
+        "username": "alice",
+        "type": "note",
+        "created_at": "2026-05-14T14:27:16+00:00"
+      }
+    ],
+    "shares": [
+      {
+        "_key": "1927",
+        "_id": "shares/1927",
+        "share_key": "815497bd-420e-4825-a24e-493d62fe10c0",
+        "note_key": "541",
+        "role": "read",
+        "enabled": true,
+        "created_by": "393",
+        "created_at": "2026-05-14T14:26:02+00:00"
+      },
+      {
+        "_key": "1990",
+        "_id": "shares/1990",
+        "share_key": "873f899d-b530-4f30-8f34-3f8c4efe1b0e",
+        "note_key": "1697",
+        "role": "write",
+        "enabled": true,
+        "created_by": "208",
+        "created_at": "2026-05-14T14:26:21+00:00"
+      },
+      {
+        "_key": "1999",
+        "_id": "shares/1999",
+        "share_key": "fcec9ca8-cbf4-47dc-bdea-efeafd73cfc6",
+        "note_key": "1697",
+        "role": "read",
+        "enabled": true,
+        "created_by": "208",
+        "created_at": "2026-05-14T14:26:22+00:00"
+      },
+      {
+        "_key": "2029",
+        "_id": "shares/2029",
+        "share_key": "7e238f1a-8460-44d7-a25a-6e95bf059b63",
+        "note_key": "1744",
+        "role": "read",
+        "enabled": true,
+        "created_by": "208",
+        "created_at": "2026-05-14T14:26:27+00:00"
+      }
+    ],
+    "permissions": [
+      {
+        "_key": "2047",
+        "_id": "permissions/2047",
+        "user_key": "393",
+        "note_key": "1744",
+        "role": "read",
+        "share_key": "7e238f1a-8460-44d7-a25a-6e95bf059b63"
+      },
+      {
+        "_key": "2178",
+        "_id": "permissions/2178",
+        "user_key": "393",
+        "note_key": "1697",
+        "role": "write",
+        "share_key": "873f899d-b530-4f30-8f34-3f8c4efe1b0e"
+      }
+    ]
+  }
+}

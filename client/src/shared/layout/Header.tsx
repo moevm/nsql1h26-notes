@@ -9,11 +9,13 @@ interface HeaderProps {
         title: string;
         onClick: () => void;
         variant?: "default" | "secondary" | "outline" | "ghost";
+        className?: string;
     }[];
     className?: string;
 }
 
 export const Header: FC<HeaderProps> = ({ title, buttons, className }) => {
+    
     return (
         <header
             className={cn(
@@ -29,6 +31,7 @@ export const Header: FC<HeaderProps> = ({ title, buttons, className }) => {
                         onClick={button.onClick}
                         size="sm"
                         variant={button.variant ?? "outline"}
+                        className={button.className}
                     >
                         {button.title}
                     </Button>

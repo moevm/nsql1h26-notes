@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from auth import auth_controller
-from db.database import ensure_db, ensure_admin_exists
+from db.seed_database import ensure_demo_data
+from db.database import ensure_db
 from user import user_controller
 from note import note_controller
 from log import log_controller
@@ -15,7 +16,7 @@ from backup import backup_controller
 async def lifespan(app: FastAPI):
     print("LIFESPAN START")
     db = ensure_db()
-    ensure_admin_exists(db)
+    ensure_demo_data(db)
     yield
 
 

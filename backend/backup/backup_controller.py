@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import Response
 
 from auth.auth_dependencies import require_admin
@@ -32,8 +32,12 @@ async def import_backup(
 ):
     raw = await file.read()
 
-    data = json.loads(raw)
-
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=400, detail="Invalid JSON file: cannot parse backup"
+        )
     service.restore_backup(data)
 
     return {"status": "ok"}

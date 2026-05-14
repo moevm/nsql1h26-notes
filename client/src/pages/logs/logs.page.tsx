@@ -14,6 +14,7 @@ import { isAdminRole } from "@/shared/lib/access-token-payload";
 import { getAccessToken, setAccessToken } from "@/shared/lib/auth-state";
 import {
     clearRefreshToken,
+    clearStoredAccessToken,
     getRefreshToken,
     setRefreshToken,
 } from "@/shared/lib/token-storage";
@@ -400,6 +401,11 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
             offset: 0,
         }));
     };
+    const logout = () => {
+        clearStoredAccessToken();
+        clearRefreshToken();
+        navigate("/auth/signin", { replace: true });
+    };
 
     if (scope === "admin" && authReady && currentUser && !isAdmin) {
         return (
@@ -409,6 +415,7 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
             />
         );
     }
+    
 
     return (
         <div className="flex min-h-screen flex-col bg-[#fafafa] text-foreground">
@@ -438,6 +445,13 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                               },
                           ]
                         : []),
+                        {
+                        title: "Выйти",
+                        onClick: logout,
+                        variant: "outline",
+                        className:
+                            "border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600",
+                    },
                 ]}
             />
 
