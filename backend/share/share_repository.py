@@ -29,7 +29,6 @@ class ShareRepository:
     def create(self, note_key: str, role: str, created_by: str) -> dict:
         share_key = str(uuid.uuid4())
         data = {
-            "_key": str(uuid.uuid4()),
             "share_key": share_key,
             "note_key": note_key,
             "role": role,

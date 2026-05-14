@@ -47,9 +47,7 @@ services:
     ports:
       - "127.0.0.1:4173:4173"
     env_file:
-      - .env
-    volumes:
-      - client_node_modules:/app/node_modules
+      - .en
     networks:
       - frontend_public
     depends_on:
@@ -58,7 +56,6 @@ services:
 
 volumes:
   arangodb_data:
-  client_node_modules:
 
 networks:
   backend_internal:
