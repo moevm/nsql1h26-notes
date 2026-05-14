@@ -8,6 +8,7 @@ from user import user_controller
 from note import note_controller
 from log import log_controller
 from share import share_controller
+from backup import backup_controller
 
 
 @asynccontextmanager
@@ -26,3 +27,4 @@ app.include_router(user_controller.router)
 app.include_router(note_controller.router)
 app.include_router(log_controller.router)
 app.include_router(share_controller.router)
+app.include_router(backup_controller.router)
