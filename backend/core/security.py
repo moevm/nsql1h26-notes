@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from passlib.context import CryptContext
 import uuid
 
-from auth.auth_schemas import UserToken
+from auth.auth_schemas import RefreshToken, UserToken
 from core.config import get_settings
 
 settings = get_settings()
@@ -21,20 +21,29 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def decode_token(token: str) -> UserToken:
+def decode_token(token: str) -> dict:
     try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
-        return UserToken(
-            user_key=payload.get("sub"),
-            username=payload.get("username"),
-            role=payload.get("role"),
-            type=payload.get("type"),
-            jti=payload.get("jti"),
+        return jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
         )
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+def decode_access_token(token: str) -> UserToken:
+    payload = decode_token(token)
+    if payload.get("type") != "access":
+        raise HTTPException(401, "Expected access token")
+    return UserToken.model_validate(payload)
+
+
+def decode_refresh_token(token: str) -> RefreshToken:
+    payload = decode_token(token)
+    if payload.get("type") != "refresh":
+        raise HTTPException(401, "Expected refresh token")
+    return RefreshToken.model_validate(payload)
 
 
 def create_token(payload: dict) -> str:

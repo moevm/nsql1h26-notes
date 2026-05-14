@@ -11,7 +11,7 @@ from user.user_service import UserService
 from user.user_dependencies import get_user_service
 from log.log_service import LogService
 from log.log_dependencies import get_log_service
-from core.security import decode_token
+from core.security import decode_access_token, decode_token
 
 security = HTTPBearer(auto_error=False)
 
@@ -31,12 +31,18 @@ def get_token_payload(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> UserToken:
     if not credentials:
-        raise HTTPException(
-            status_code=401,
-            detail="Not authenticated",
-        )
+        raise HTTPException(401, "Not authenticated")
+    return decode_access_token(credentials.credentials)
 
-    return decode_token(credentials.credentials)
+
+def get_refresh_token_payload(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> dict:
+    if not credentials:
+        raise HTTPException(401, "Not authenticated")
+    from core.security import decode_refresh_token
+
+    return decode_refresh_token(credentials.credentials)
 
 
 def get_current_user_key(payload: UserToken = Depends(get_token_payload)) -> str:
@@ -72,13 +78,6 @@ def require_admin(
             detail="Admin access required",
         )
     return user
-
-
-def get_refresh_token_payload(payload: dict = Depends(get_token_payload)) -> dict:
-    if payload.get("type") != "refresh":
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
-
-    return payload
 
 
 def get_optional_user(

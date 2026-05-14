@@ -1,4 +1,6 @@
+from datetime import datetime
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -25,8 +27,15 @@ class AuthResponse(BaseModel):
 
 
 class UserToken(BaseModel):
-    user_key: str
+    user_key: str = Field(validation_alias="sub")
     username: str
     role: UserRole
     type: str
     jti: str | None = None
+
+
+class RefreshToken(BaseModel):
+    user_key: str = Field(validation_alias="sub")
+    type: Literal["refresh"]
+    jti: str
+    exp: datetime
