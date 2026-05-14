@@ -30,7 +30,11 @@ docker compose up -d --build
 ```
 ### Тестирование
 Приложение будет доступно по адресу http://localhost:4173
+
 Логины и пароли тестовых пользователей:
-- Администратор: admin / adminpass
-- Пользователь: test_user / password
+- Администратор: `admin` / `adminpass`
+- Обычные пользователи:
+    - `test_user` / `password`
+    - `bob` / `password`
+    - `alice` / `password`
 
