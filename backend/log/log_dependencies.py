@@ -10,10 +10,12 @@ from user.user_dependencies import get_user_service
 from user.user_service import UserService
 
 
-def get_log_repository(
-    db: StandardDatabase = Depends(get_db)
-) -> LogRepository:
+def get_log_repository(db: StandardDatabase = Depends(get_db)) -> LogRepository:
     return LogRepository(db)
 
-def get_log_service(log_repo: LogRepository = Depends(get_log_repository), user_service: UserService = Depends(get_user_service)) -> LogService:
-    return LogService(log_repo,user_service)
+
+def get_log_service(
+    log_repo: LogRepository = Depends(get_log_repository),
+    user_service: UserService = Depends(get_user_service),
+) -> LogService:
+    return LogService(log_repo, user_service)

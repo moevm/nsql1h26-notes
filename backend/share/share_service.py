@@ -1,5 +1,8 @@
 from fastapi import HTTPException
 
+from user.user_service import UserService
+from log.log_schemas import PermissionAction, PermissionLogCreate
+from log.log_service import LogService
 from share.share_schemas import ShareRole
 from model.user import User
 from note.note_repository import NoteRepository
@@ -13,10 +16,14 @@ class ShareService:
         share_repo: ShareRepository,
         note_repo: NoteRepository,
         perm_repo: PermissionRepository,
+        log_service: LogService,
+        user_service: UserService,
     ):
         self.share_repo = share_repo
         self.note_repo = note_repo
         self.perm_repo = perm_repo
+        self.log_service = log_service
+        self.user_service = user_service
 
     def _get_note_for_owner(self, note_key: str, user: User):
         note = self.note_repo.get(note_key)
@@ -59,11 +66,27 @@ class ShareService:
 
         if user:
             if note["user_ref"] != user.user_key:
+                existing = self.perm_repo.get(user.user_key, note["_key"])
+                before_role = existing["role"] if existing else "none"
                 self.perm_repo.upsert(
                     user_key=user.user_key,
                     note_key=note["_key"],
                     role=effective_role,
                     share_key=share["share_key"],
+                )
+                self.log_service.create_permission_log_by_key(
+                    granted_by_key=note["user_ref"],
+                    granted_by_username=note["username"],
+                    granted_to_key=user.user_key,
+                    granted_to_username=user.username,
+                    data=PermissionLogCreate(
+                        action=PermissionAction.GRANT,
+                        note_key=note["_key"],
+                        before_permission_type=before_role,
+                        after_permission_type=effective_role,
+                        granted_by_key=note["user_ref"],
+                        granted_to_key=user.user_key,
+                    ),
                 )
 
         return {
@@ -88,7 +111,24 @@ class ShareService:
         if not note or note["user_ref"] != user.user_key:
             raise HTTPException(403, "Not owner")
 
-        self.perm_repo.delete_by_share_key(share_key)
+        permissions = self.perm_repo.delete_by_share_key(share_key)
         self.share_repo.delete(share_key)
+
+        for perm in permissions:
+            granted_to_user = self.user_service.get_user(perm["user_key"])
+            self.log_service.create_permission_log_by_key(
+                granted_by_key=user.user_key,
+                granted_by_username=user.username,
+                granted_to_key=perm["user_key"],
+                granted_to_username=granted_to_user["username"],
+                data=PermissionLogCreate(
+                    action=PermissionAction.REVOKE,
+                    note_key=note["_key"],
+                    before_permission_type=perm["role"],
+                    after_permission_type="none",
+                    granted_by_key=user.user_key,
+                    granted_to_key=perm["user_key"],
+                ),
+            )
 
         return {"deleted": True, "share_key": share_key}

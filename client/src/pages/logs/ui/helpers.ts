@@ -89,6 +89,30 @@ export function formatKey(value?: string | null) {
     return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-6)}` : value;
 }
 
+export function getLogActor(log: Log): string {
+    if (log.type === "registration") {
+        return log.username;
+    }
+
+    if (log.type === "note") {
+        return log.username;
+    }
+
+    if (log.type === "permission") {
+        return log.granted_by_username;
+    }
+
+    return "неизвестно";
+}
+
+export function getLogTarget(log: Log): string | null {
+    if (log.type === "permission") {
+        return log.granted_to_username;
+    }
+
+    return null;
+}
+
 export function getActionLabel(log: Log) {
     return actionLabels[`${log.type}:${log.action}` as ActionFilter] ?? log.action;
 }

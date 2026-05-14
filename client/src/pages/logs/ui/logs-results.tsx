@@ -122,7 +122,7 @@ function LogActorsCell({ log }: { log: Log }) {
     if (log.type === "registration") {
         return (
             <p className="font-mono text-xs text-muted-foreground" title={log.user_key}>
-                {formatKey(log.user_key)}
+                {formatKey(log.username)}
             </p>
         );
     }
@@ -131,10 +131,10 @@ function LogActorsCell({ log }: { log: Log }) {
         return (
             <div className="space-y-1 text-xs text-muted-foreground">
                 <p title={log.granted_by_key}>
-                    От: <span className="font-mono">{formatKey(log.granted_by_key)}</span>
+                    От: <span className="font-mono">{formatKey(log.granted_by_username)}</span>
                 </p>
                 <p title={log.granted_to_key}>
-                    Кому: <span className="font-mono">{formatKey(log.granted_to_key)}</span>
+                    Кому: <span className="font-mono">{formatKey(log.granted_to_username)}</span>
                 </p>
             </div>
         );
@@ -142,7 +142,7 @@ function LogActorsCell({ log }: { log: Log }) {
 
     return (
         <p className="font-mono text-xs text-muted-foreground" title={log.user_key}>
-            {formatKey(log.user_key)}
+            {formatKey(log.username)}
         </p>
     );
 }

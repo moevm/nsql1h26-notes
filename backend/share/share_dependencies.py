@@ -1,6 +1,10 @@
 from fastapi import Depends
 from arango.database import StandardDatabase
 
+from user.user_dependencies import get_user_service
+from user.user_service import UserService
+from log.log_dependencies import get_log_service
+from log.log_service import LogService
 from note.note_dependencies import get_note_repository
 from note.note_repository import NoteRepository
 from permission.permission_dependencies import get_permission_repository
@@ -18,5 +22,7 @@ def get_share_service(
     share_repo: ShareRepository = Depends(get_share_repository),
     perm_repo: PermissionRepository = Depends(get_permission_repository),
     note_repo: NoteRepository = Depends(get_note_repository),
+    log_service: LogService = Depends(get_log_service),
+    user_service: UserService = Depends(get_user_service),
 ) -> ShareService:
-    return ShareService(share_repo, note_repo, perm_repo)
+    return ShareService(share_repo, note_repo, perm_repo, log_service, user_service)

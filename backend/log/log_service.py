@@ -10,7 +10,11 @@ from log.log_schemas import (
     NotesLogCreate,
     NotesLogResponse,
     PermissionLogCreate,
-    PermissionLogResponse, LogType, LogResponse, RegistrationAction, LogFilter
+    PermissionLogResponse,
+    LogType,
+    LogResponse,
+    RegistrationAction,
+    LogFilter,
 )
 
 
@@ -32,7 +36,8 @@ class LogService:
             log_key=log["_key"],
             action=log["action"],
             user_key=log["user_key"],
-            created_at=log["created_at"]
+            created_at=log["created_at"],
+            username=log["username"],
         )
 
     @staticmethod
@@ -45,8 +50,9 @@ class LogService:
             user_key=log["user_key"],
             state_before=log["state_before"],
             state_after=log["state_after"],
+            username=log["username"],
             diff=log["diff"],
-            created_at=log["created_at"]
+            created_at=log["created_at"],
         )
 
     @staticmethod
@@ -58,9 +64,11 @@ class LogService:
             note_key=log["note_key"],
             granted_by_key=log["granted_by_key"],
             granted_to_key=log["granted_to_key"],
+            granted_by_username=log["granted_by_username"],
+            granted_to_username=log["granted_to_username"],
             before_permission_type=log["before_permission_type"],
             after_permission_type=log["after_permission_type"],
-            created_at=log["created_at"]
+            created_at=log["created_at"],
         )
 
     def _to_response(self, log: dict) -> LogResponse:
@@ -69,36 +77,41 @@ class LogService:
             raise HTTPException(404, "Unknown log type")
         return handler(log)
 
-    def create_registration_log(self, user_ref: str):
-        log = self.repo.create({
-            "user_key": user_ref,
-            "type": LogType.REGISTRATION,
-            "action": RegistrationAction.REGISTER,
-        })
+    def create_registration_log(self, user_ref: str, username: str):
+        log = self.repo.create(
+            {
+                "user_key": user_ref,
+                "username": username,
+                "type": LogType.REGISTRATION,
+                "action": RegistrationAction.REGISTER,
+            }
+        )
         return self._to_registration_response(log)
 
-    def create_note_log(self, user_ref: str, data: NotesLogCreate):
-        log = self.repo.create({
-            **data.model_dump(),
-            "user_key": user_ref,
-            "type": LogType.NOTE,
-        })
+    def create_note_log(self, user_ref: str, username: str, data: NotesLogCreate):
+        log = self.repo.create(
+            {
+                **data.model_dump(),
+                "user_key": user_ref,
+                "username": username,
+                "type": LogType.NOTE,
+            }
+        )
         return self._to_note_response(log)
 
     def create_permission_log(
-            self,
-            granted_by_ref: str,
-            granted_to_username: str,
-            data: PermissionLogCreate
+        self, granted_by_ref: str, granted_to_username: str, data: PermissionLogCreate
     ):
         granted_to_ref = self.user_service.get_user_key_by_username(granted_to_username)
 
-        log = self.repo.create({
-            **data.model_dump(),
-            "type": LogType.PERMISSION,
-            "granted_by_key": granted_by_ref,
-            "granted_to_key": granted_to_ref
-        })
+        log = self.repo.create(
+            {
+                **data.model_dump(),
+                "type": LogType.PERMISSION,
+                "granted_by_key": granted_by_ref,
+                "granted_to_key": granted_to_ref,
+            }
+        )
 
         return self._to_permission_response(log)
 
@@ -108,3 +121,23 @@ class LogService:
         else:
             raw_logs = self.repo.get_by_user(user.user_key, filters)
         return [self._to_response(log) for log in raw_logs]
+
+    def create_permission_log_by_key(
+        self,
+        granted_by_key: str,
+        granted_by_username: str,
+        granted_to_key: str,
+        granted_to_username: str,
+        data: PermissionLogCreate,
+    ):
+        log = self.repo.create(
+            {
+                **data.model_dump(),
+                "type": LogType.PERMISSION,
+                "granted_by_key": granted_by_key,
+                "granted_by_username": granted_by_username,
+                "granted_to_key": granted_to_key,
+                "granted_to_username": granted_to_username,
+            }
+        )
+        return self._to_permission_response(log)

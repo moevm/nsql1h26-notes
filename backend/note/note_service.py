@@ -129,6 +129,7 @@ class NoteService:
         response_note = self._to_response(note)
         self.log_service.create_note_log(
             user.user_key,
+            user.username,
             NotesLogCreate(
                 action=NoteAction.CREATE,
                 note_key=response_note.note_key,
@@ -159,6 +160,7 @@ class NoteService:
         after = self._to_snapshot(updated)
         self.log_service.create_note_log(
             user.user_key,
+            user.username,
             NotesLogCreate(
                 action=NoteAction.UPDATE,
                 note_key=note_key,
@@ -180,6 +182,7 @@ class NoteService:
         after = self._to_snapshot(updated)
         self.log_service.create_note_log(
             user.user_key,
+            user.username,
             NotesLogCreate(
                 action=NoteAction.UPDATE,
                 note_key=note_key,
@@ -195,6 +198,7 @@ class NoteService:
         before = self._to_snapshot(note)
         self.log_service.create_note_log(
             user.user_key,
+            user.username,
             NotesLogCreate(
                 action=NoteAction.DELETE,
                 note_key=note_key,

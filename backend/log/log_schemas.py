@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from utils.datetime_utils import normalize_datetime, validate_date_range
 
-
 # Enums
+
 
 class LogType(str, Enum):
     REGISTRATION = "registration"
@@ -28,6 +28,7 @@ class NoteAction(str, Enum):
 class PermissionAction(str, Enum):
     GRANT = "grant"
     REVOKE = "revoke"
+
 
 class NoteSnapshot(BaseModel):
     title: str
@@ -63,6 +64,7 @@ class RegistrationLogResponse(LogBase):
     type: Literal[LogType.REGISTRATION]
     action: RegistrationAction
     user_key: str
+    username: str
 
 
 class NotesLogResponse(LogBase):
@@ -73,6 +75,7 @@ class NotesLogResponse(LogBase):
     state_after: NoteSnapshot
     diff: str
     user_key: str
+    username: str
 
 
 class PermissionLogResponse(LogBase):
@@ -82,16 +85,14 @@ class PermissionLogResponse(LogBase):
     before_permission_type: str
     after_permission_type: str
     granted_by_key: str
+    granted_by_username: str
     granted_to_key: str
+    granted_to_username: str
 
 
 LogResponse = Annotated[
-    Union[
-        RegistrationLogResponse,
-        NotesLogResponse,
-        PermissionLogResponse
-    ],
-    Field(discriminator="type")
+    Union[RegistrationLogResponse, NotesLogResponse, PermissionLogResponse],
+    Field(discriminator="type"),
 ]
 
 
@@ -127,23 +128,20 @@ class LogFilter(BaseModel):
                 raise HTTPException(400, "Only note_action allowed for NOTE type")
         if self.type == LogType.PERMISSION:
             if self.note_action or self.registration_action:
-                raise HTTPException(400, "Only permission_action allowed for PERMISSION type")
+                raise HTTPException(
+                    400, "Only permission_action allowed for PERMISSION type"
+                )
         if self.type == LogType.REGISTRATION:
             if self.note_action or self.permission_action:
-                raise HTTPException(400, "Only registration_action allowed for REGISTRATION type")
+                raise HTTPException(
+                    400, "Only registration_action allowed for REGISTRATION type"
+                )
         return self
 
     @model_validator(mode="after")
     def validate_single_action(self):
-        actions = [
-            self.note_action,
-            self.permission_action,
-            self.registration_action
-        ]
+        actions = [self.note_action, self.permission_action, self.registration_action]
         filled = [a for a in actions if a is not None]
         if len(filled) > 1:
-            raise HTTPException(
-                400,
-                "Only one action filter can be used at a time"
-            )
+            raise HTTPException(400, "Only one action filter can be used at a time")
         return self

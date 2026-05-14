@@ -16,11 +16,9 @@ class AuthService:
             raise HTTPException(400, "User already exists")
         if not self._validate_password(password, confirm_password):
             raise HTTPException(400, "Passwords do not match")
-        
+
         user = self.user_service.create_user(username, password)
-        self.log_service.create_registration_log(
-            user.user_key,
-        )
+        self.log_service.create_registration_log(user.user_key, user.username)
 
         return user
 

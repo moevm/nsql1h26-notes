@@ -22,6 +22,7 @@ export type RegistrationLog = LogBase & {
     type: "registration";
     action: NonNullable<RegistrationAction>;
     user_key: string;
+    username: string;
 };
 
 export type NoteLog = LogBase & {
@@ -32,6 +33,7 @@ export type NoteLog = LogBase & {
     state_after: NoteState;
     diff: string;
     user_key: string;
+    username: string;
 };
 
 export type PermissionLog = LogBase & {
@@ -41,7 +43,9 @@ export type PermissionLog = LogBase & {
     before_permission_type: string;
     after_permission_type: string;
     granted_by_key: string;
+    granted_by_username: string;
     granted_to_key: string;
+    granted_to_username: string;
 };
 
 export type Log = RegistrationLog | NoteLog | PermissionLog;
