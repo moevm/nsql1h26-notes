@@ -29,5 +29,25 @@ export function useUpdateNote() {
         [],
     );
 
-    return { updateNote, loading, error };
+    const patchNote = useCallback(
+        async (
+            noteKey: string,
+            payload: Partial<UpdateNoteRequest>,
+        ): Promise<UpdateNoteResponse | null> => {
+            setLoading(true);
+            setError(null);
+
+            try {
+                return await noteProxy.patchNote(noteKey, payload);
+            } catch (err) {
+                setError(getErrorMessage(err));
+                return null;
+            } finally {
+                setLoading(false);
+            }
+        },
+        [],
+    );
+
+    return { updateNote, patchNote, loading, error };
 }

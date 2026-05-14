@@ -12,14 +12,27 @@ import { useGetLogs } from "@/features/logs/hooks/use-get-logs";
 import { Header } from "@/shared/layout/Header";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
 import { getAccessToken, setAccessToken } from "@/shared/lib/auth-state";
-import { clearRefreshToken, getRefreshToken, setRefreshToken } from "@/shared/lib/token-storage";
+import {
+    clearRefreshToken,
+    getRefreshToken,
+    setRefreshToken,
+} from "@/shared/lib/token-storage";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
 import { AccessDenied } from "@/pages/logs/ui/access-denied";
+import { BackupPanel } from "@/pages/logs/ui/backup-panel";
 import { defaultFilters, emptyLogStats } from "@/pages/logs/ui/constants";
-import { buildQuery, formatKey, getActionOptions } from "@/pages/logs/ui/helpers";
+import {
+    buildQuery,
+    formatKey,
+    getActionOptions,
+} from "@/pages/logs/ui/helpers";
 import { LogsFiltersPanel } from "@/pages/logs/ui/logs-filters-panel";
 import { LogsResults } from "@/pages/logs/ui/logs-results";
-import type { LogFilters, LogsPageScope, TypeFilter } from "@/pages/logs/ui/types";
+import type {
+    LogFilters,
+    LogsPageScope,
+    TypeFilter,
+} from "@/pages/logs/ui/types";
 
 export function LogsPage({ scope }: { scope: LogsPageScope }) {
     const navigate = useNavigate();
@@ -36,8 +49,10 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
     const [usersLoading, setUsersLoading] = useState(false);
     const [usersError, setUsersError] = useState<string | null>(null);
     const [lastPageOffset, setLastPageOffset] = useState<number | null>(null);
-    const [draftFilters, setDraftFilters] = useState<LogFilters>(defaultFilters);
-    const [appliedFilters, setAppliedFilters] = useState<LogFilters>(defaultFilters);
+    const [draftFilters, setDraftFilters] =
+        useState<LogFilters>(defaultFilters);
+    const [appliedFilters, setAppliedFilters] =
+        useState<LogFilters>(defaultFilters);
 
     useEffect(() => {
         let alive = true;
@@ -114,7 +129,11 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                 }
 
                 setNotes([]);
-                setNotesError(err instanceof Error ? err.message : "Не удалось загрузить заметки");
+                setNotesError(
+                    err instanceof Error
+                        ? err.message
+                        : "Не удалось загрузить заметки",
+                );
             } finally {
                 if (alive) {
                     setNotesLoading(false);
@@ -163,7 +182,11 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                 }
 
                 setUsers([]);
-                setUsersError(err instanceof Error ? err.message : "Не удалось загрузить пользователей");
+                setUsersError(
+                    err instanceof Error
+                        ? err.message
+                        : "Не удалось загрузить пользователей",
+                );
             } finally {
                 if (alive) {
                     setUsersLoading(false);
@@ -207,14 +230,19 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
 
         const loadLogs = async () => {
             const requestedOffset = appliedFilters.offset;
-            const result = await getLogs(buildQuery(appliedFilters, scope, currentUser));
+            const result = await getLogs(
+                buildQuery(appliedFilters, scope, currentUser),
+            );
 
             if (!alive || !result) {
                 return;
             }
 
             if (requestedOffset > 0 && result.length === 0) {
-                const fallbackOffset = Math.max(0, requestedOffset - appliedFilters.limit);
+                const fallbackOffset = Math.max(
+                    0,
+                    requestedOffset - appliedFilters.limit,
+                );
 
                 setLastPageOffset(fallbackOffset);
                 setAppliedFilters((current) =>
@@ -244,7 +272,15 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
         return () => {
             alive = false;
         };
-    }, [appliedFilters, authReady, currentUser, getLogs, isAdmin, navigate, scope]);
+    }, [
+        appliedFilters,
+        authReady,
+        currentUser,
+        getLogs,
+        isAdmin,
+        navigate,
+        scope,
+    ]);
 
     const stats = useMemo(() => {
         return logs.reduce(
@@ -261,11 +297,12 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
         scope === "admin"
             ? "Все события системы без ограничения по пользователю"
             : isAdmin && currentUser?.sub
-                ? `Логи аккаунта ${formatKey(currentUser.sub)}`
-                : "События, связанные с вашим аккаунтом";
+              ? `Логи аккаунта ${formatKey(currentUser.sub)}`
+              : "События, связанные с вашим аккаунтом";
 
     const availableActions = getActionOptions(draftFilters.type);
-    const currentPage = Math.floor(appliedFilters.offset / appliedFilters.limit) + 1;
+    const currentPage =
+        Math.floor(appliedFilters.offset / appliedFilters.limit) + 1;
     const hasNextPage =
         lastPageOffset !== null
             ? appliedFilters.offset < lastPageOffset
@@ -341,8 +378,8 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
         setAppliedFilters((current) => ({
             ...current,
             offset:
-                lastPageOffset !== null
-                && (page - 1) * current.limit > lastPageOffset
+                lastPageOffset !== null &&
+                (page - 1) * current.limit > lastPageOffset
                     ? current.offset
                     : (page - 1) * current.limit,
         }));
@@ -385,21 +422,21 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                     },
                     ...(scope === "admin"
                         ? [
-                            {
-                                title: "Моя страница",
-                                onClick: () => navigate("/logs/my"),
-                                variant: "secondary" as const,
-                            },
-                        ]
+                              {
+                                  title: "Моя страница",
+                                  onClick: () => navigate("/logs/my"),
+                                  variant: "secondary" as const,
+                              },
+                          ]
                         : []),
                     ...(scope === "my" && isAdmin
                         ? [
-                            {
-                                title: "Админ-панель",
-                                onClick: () => navigate("/admin/logs"),
-                                variant: "secondary" as const,
-                            },
-                        ]
+                              {
+                                  title: "Админ-панель",
+                                  onClick: () => navigate("/admin/logs"),
+                                  variant: "secondary" as const,
+                              },
+                          ]
                         : []),
                 ]}
             />
@@ -426,6 +463,8 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                     onUpdateField={updateField}
                     onUpdateType={updateType}
                 />
+
+                {scope === "admin" && isAdmin ? <BackupPanel /> : null}
 
                 <LogsResults
                     logs={logs}

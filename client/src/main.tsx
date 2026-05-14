@@ -7,13 +7,13 @@ import "./index.css";
 import { setForbiddenRedirect } from "@/shared/lib/auth-state";
 
 setForbiddenRedirect(() => {
-  window.location.assign("/auth/signup");
+    window.location.assign("/auth/signin");
 });
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <BrowserRouter>
-        <App />
-    </BrowserRouter>
-  </React.StrictMode>
+    <React.StrictMode>
+        <BrowserRouter>
+            <App />
+        </BrowserRouter>
+    </React.StrictMode>,
 );

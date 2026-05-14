@@ -5,7 +5,7 @@ import {
     useMemo,
     useState,
 } from "react";
-import { Loader2, Plus, Save, Trash2, X } from "lucide-react";
+import { Loader2, Plus, Save, Share2, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import type { Note } from "@/entities/note/types/dto";
 import type { CreateNoteRequest } from "@/entities/note/types/requests";
 import { cn } from "@/lib/utils";
 import { useNoteLayout } from "@/pages/note/ui/note-layout-context";
+import { NoteShareModal } from "@/pages/note/ui/note-share-modal";
+import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
 
 type NoteEditorMode = "new" | "edit";
 
@@ -57,6 +59,7 @@ function formatNoteTimestamp(value: string) {
 
 export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
     const navigate = useNavigate();
+    const currentUser = useAccessTokenPayload();
     const { refreshNotes } = useNoteLayout();
     const {
         getNoteByKey,
@@ -70,6 +73,7 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
     } = useCreateNote();
     const {
         updateNote,
+        patchNote,
         loading: updateLoading,
         error: updateError,
     } = useUpdateNote();
@@ -86,6 +90,7 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
     const [tags, setTags] = useState<string[]>([]);
     const [tagDraft, setTagDraft] = useState("");
     const [savingHint, setSavingHint] = useState<string | null>(null);
+    const [shareOpen, setShareOpen] = useState(false);
 
     const isEditing = mode === "edit";
     const busy = noteLoading || createLoading || updateLoading || deleteLoading;
@@ -176,7 +181,14 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
         setSavingHint(null);
 
         if (isEditing && noteKey) {
-            const updated = await updateNote(noteKey, payload);
+            const isOwnNote = loadedNote?.user_ref === currentUser?.sub;
+            const updated = isOwnNote
+                ? await updateNote(noteKey, payload)
+                : await patchNote(noteKey, {
+                      title: payload.title,
+                      content: payload.content,
+                      tags: payload.tags,
+                  });
 
             if (!updated) {
                 return;
@@ -203,11 +215,14 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
         navigate(`/notes/${created.note_key}`, { replace: true });
     }, [
         createNote,
+        currentUser?.sub,
         effectiveParentKey,
         isEditing,
         lines,
+        loadedNote?.user_ref,
         navigate,
         noteKey,
+        patchNote,
         refreshNotes,
         tags,
         title,
@@ -291,7 +306,7 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#fafafa] text-foreground">
-            <div className="flex items-center justify-between border-b border-black/5 bg-white px-6 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 bg-white px-6 py-4">
                 <div className="min-w-0">
                     <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                         {isEditing ? "Существующая заметка" : "Новая заметка"}
@@ -320,17 +335,13 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
                             <p>
                                 Создана:{" "}
                                 <time dateTime={loadedNote.created_at}>
-                                    {formatNoteTimestamp(
-                                        loadedNote.created_at,
-                                    )}
+                                    {formatNoteTimestamp(loadedNote.created_at)}
                                 </time>
                             </p>
                             <p>
                                 Последнее изменение:{" "}
                                 <time dateTime={loadedNote.updated_at}>
-                                    {formatNoteTimestamp(
-                                        loadedNote.updated_at,
-                                    )}
+                                    {formatNoteTimestamp(loadedNote.updated_at)}
                                 </time>
                             </p>
                         </div>
@@ -338,6 +349,16 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShareOpen(true)}
+                        disabled={!isEditing || !loadedNote || busy}
+                    >
+                        <Share2 className="h-4 w-4" />
+                        Поделиться
+                    </Button>
                     <Button
                         type="button"
                         variant="outline"
@@ -364,6 +385,14 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
                     </Button>
                 </div>
             </div>
+
+            {isEditing && loadedNote ? (
+                <NoteShareModal
+                    open={shareOpen}
+                    note={loadedNote}
+                    onClose={() => setShareOpen(false)}
+                />
+            ) : null}
 
             <div className="min-h-0 flex-1 overflow-y-auto">
                 <div className="mx-auto flex w-full max-w-[900px] flex-col gap-3 px-0 py-0">

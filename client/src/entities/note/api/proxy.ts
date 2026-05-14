@@ -78,14 +78,33 @@ class NotesProxy {
         params: UpdateNoteRequest,
     ): Promise<UpdateNoteResponse | null> => {
         try {
-            const response: AxiosResponse<UpdateNoteResponse> = await authRequest<UpdateNoteResponse>({
-                url: `${this.BASE_URL}/${note_key}`,
-                method: "PUT",
-                data: params,
-            });
+            const response: AxiosResponse<UpdateNoteResponse> =
+                await authRequest<UpdateNoteResponse>({
+                    url: `${this.BASE_URL}/${note_key}`,
+                    method: "PUT",
+                    data: params,
+                });
             return response.data;
         } catch (e) {
             console.log("[ERROR] while updating note", e);
+            return null;
+        }
+    };
+
+    public patchNote = async (
+        note_key: string,
+        params: Partial<UpdateNoteRequest>,
+    ): Promise<UpdateNoteResponse | null> => {
+        try {
+            const response: AxiosResponse<UpdateNoteResponse> =
+                await authRequest<UpdateNoteResponse>({
+                    url: `${this.BASE_URL}/${note_key}`,
+                    method: "PATCH",
+                    data: params,
+                });
+            return response.data;
+        } catch (e) {
+            console.log("[ERROR] while patching note", e);
             return null;
         }
     };
