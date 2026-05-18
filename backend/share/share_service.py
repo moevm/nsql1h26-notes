@@ -97,6 +97,7 @@ class ShareService:
             "content": note["content"],
             "parent_key": note.get("parent_key"),
             "tags": note.get("tags", []),
+            "linked_note_keys": note.get("linked_note_keys", []),
             "created_at": note["created_at"],
             "updated_at": note["updated_at"],
             "access_role": effective_role,

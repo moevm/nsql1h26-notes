@@ -14,7 +14,15 @@ settings = get_settings()
 client = ArangoClient(hosts=settings.database_url)
 db: StandardDatabase | None = None
 
-COLLECTIONS: tuple[str, ...] = ("users", "notes", "logs", "shares", "permissions")
+DOCUMENT_COLLECTIONS: tuple[str, ...] = (
+    "users",
+    "notes",
+    "logs",
+    "shares",
+    "permissions",
+)
+EDGE_COLLECTIONS: tuple[str, ...] = ("note_links",)
+COLLECTIONS: tuple[str, ...] = DOCUMENT_COLLECTIONS + EDGE_COLLECTIONS
 MAX_INIT_ATTEMPTS = 30
 RETRY_DELAY_SECONDS = 2.0
 
@@ -51,10 +59,18 @@ def ensure_db(
                 password=settings.ARANGO_PASSWORD,
             )
 
-            for collection_name in COLLECTIONS:
+            for collection_name in DOCUMENT_COLLECTIONS:
                 if not db.has_collection(collection_name):
                     try:
                         db.create_collection(collection_name)
+                    except CollectionCreateError:
+                        if not db.has_collection(collection_name):
+                            raise
+
+            for collection_name in EDGE_COLLECTIONS:
+                if not db.has_collection(collection_name):
+                    try:
+                        db.create_collection(collection_name, edge=True)
                     except CollectionCreateError:
                         if not db.has_collection(collection_name):
                             raise

@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from backup.backup_repository import BackupRepository
 from backup.backup_schemas import BackupSchema
-from db.database import COLLECTIONS
+from db.database import DOCUMENT_COLLECTIONS, EDGE_COLLECTIONS
 
 
 class BackupService:
@@ -34,9 +34,13 @@ class BackupService:
             if backup.version != 1:
                 raise ValueError("Unsupported backup version")
 
-            for collection_name in COLLECTIONS:
+            for collection_name in DOCUMENT_COLLECTIONS:
                 if collection_name not in backup.collections:
                     raise ValueError(f"Missing collection: {collection_name}")
+
+            for collection_name in EDGE_COLLECTIONS:
+                if collection_name not in backup.collections:
+                    backup.collections[collection_name] = []
 
             return backup
 

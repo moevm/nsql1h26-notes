@@ -38,6 +38,7 @@ class NoteService:
             content=note["content"],
             parent_key=note.get("parent_key"),
             tags=note.get("tags", []),
+            linked_note_keys=note.get("linked_note_keys", []),
             created_at=note["created_at"],
             updated_at=note["updated_at"],
             user_ref=note["user_ref"],
@@ -51,6 +52,7 @@ class NoteService:
             content=note["content"],
             parent_key=note.get("parent_key"),
             tags=note.get("tags", []),
+            linked_note_keys=note.get("linked_note_keys", []),
         )
 
     def _check_note_access(
@@ -121,9 +123,27 @@ class NoteService:
 
             self._check_cycle(parent_key, note_key)
 
+    def _validate_linked_notes(
+        self,
+        linked_note_keys: list[str],
+        user: User,
+        note_key: str | None = None,
+    ):
+        for linked_note_key in linked_note_keys:
+            if linked_note_key == note_key:
+                raise HTTPException(400, "Note cannot link to itself")
+
+            linked_note = self.repo.get(linked_note_key)
+
+            if not linked_note:
+                raise HTTPException(400, "Linked note does not exist")
+
+            self._check_note_access(linked_note, user, ShareRole.READ)
+
     def create_note(self, user: User, data: NoteCreate) -> NoteResponse:
         if data.parent_key:
             self._validate_parent(data.parent_key, user)
+        self._validate_linked_notes(data.linked_note_keys, user)
 
         note = self.repo.create({**data.model_dump(), "user_ref": user.user_key})
         response_note = self._to_response(note)
@@ -134,7 +154,11 @@ class NoteService:
                 action=NoteAction.CREATE,
                 note_key=response_note.note_key,
                 state_before=NoteSnapshot(
-                    title="", content="", parent_key=None, tags=[]
+                    title="",
+                    content="",
+                    parent_key=None,
+                    tags=[],
+                    linked_note_keys=[],
                 ),
                 state_after=self._to_snapshot(note),
                 diff="",
@@ -154,6 +178,8 @@ class NoteService:
         payload = data.model_dump(exclude_unset=True)
         if "parent_key" in payload and payload["parent_key"] is not None:
             self._validate_parent(payload["parent_key"], user, note_key)
+        if "linked_note_keys" in payload and payload["linked_note_keys"] is not None:
+            self._validate_linked_notes(payload["linked_note_keys"], user, note_key)
         updated = self.repo.update(note_key, payload)
         if not updated:
             raise HTTPException(404, "Note not found")
@@ -176,6 +202,7 @@ class NoteService:
         before = self._to_snapshot(note)
         if data.parent_key is not None:
             self._validate_parent(data.parent_key, user, note_key)
+        self._validate_linked_notes(data.linked_note_keys, user, note_key)
         updated = self.repo.update(note_key, data.model_dump())
         if not updated:
             raise HTTPException(404, "Note not found")
@@ -204,7 +231,11 @@ class NoteService:
                 note_key=note_key,
                 state_before=before.model_dump(),
                 state_after=NoteSnapshot(
-                    title="", content="", parent_key=None, tags=[]
+                    title="",
+                    content="",
+                    parent_key=None,
+                    tags=[],
+                    linked_note_keys=[],
                 ),
                 diff="",
             ),
