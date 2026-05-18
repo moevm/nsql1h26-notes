@@ -28,14 +28,14 @@ from permission.permission_repository import PermissionRepository
 
 class NoteService:
     ALLOWED_STATS_SERIES: dict[tuple[str, str], set[str]] = {
-        ("notes_count", "created_date"): {"none", "user", "tag"},
-        ("notes_count", "updated_date"): {"none", "user", "tag"},
-        ("notes_count", "tag"): {"none", "user", "created_date"},
-        ("notes_count", "user"): {"none", "tag", "created_date"},
+        ("notes_count", "created_date"): {"none", "user"},
+        ("notes_count", "updated_date"): {"none", "user"},
+        ("notes_count", "tag"): {"none"},
+        ("notes_count", "user"): {"none"},
         ("tags_count", "note"): {"none"},
         ("tags_count", "user"): {"none"},
-        ("tags_count", "created_date"): {"none", "user"},
-        ("tags_count", "updated_date"): {"none", "user"},
+        ("tags_count", "created_date"): {"none"},
+        ("tags_count", "updated_date"): {"none"},
     }
 
     STATS_CHARTS: dict[NoteStatsChart, dict] = {
@@ -81,10 +81,10 @@ class NoteService:
         },
         "tags_by_user": {
             "title": "Теги по пользователям",
-            "description": "Сколько заметок с каждым тегом есть у каждого пользователя.",
-            "x_axis": "tag",
-            "series_axis": "user",
-            "metric": "notes_count",
+            "description": "Сколько тегов суммарно проставлено в заметках каждого пользователя.",
+            "x_axis": "user",
+            "series_axis": "none",
+            "metric": "tags_count",
             "admin_only": True,
         },
     }
