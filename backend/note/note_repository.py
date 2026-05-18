@@ -1,5 +1,5 @@
 from arango.database import StandardDatabase
-from note.note_schemas import NoteFilter
+from note.note_schemas import NoteFilter, NoteStatsFilter
 from utils.datetime_utils import now_iso
 
 
@@ -18,6 +18,70 @@ class NoteRepository:
         if "linked_note_keys" not in data:
             return None
         return data.pop("linked_note_keys")
+
+    def _build_note_filters(
+        self,
+        user_ref: str | None,
+        filters: NoteFilter | NoteStatsFilter,
+        bind_vars: dict,
+    ) -> list[str]:
+        filters_list = []
+
+        if user_ref is not None:
+            filters_list.append("n.user_ref == @user_ref")
+            bind_vars["user_ref"] = user_ref
+
+        if filters.parent_key == "root":
+            filters_list.append("n.parent_key == null")
+        elif filters.parent_key is not None:
+            filters_list.append("n.parent_key == @parent_key")
+            bind_vars["parent_key"] = filters.parent_key
+
+        if filters.linked_note_key is not None:
+            filters_list.append(
+                """
+                LENGTH((
+                    FOR e IN note_links
+                        FILTER e._from == n._id
+                            AND e._to == @linked_note_id
+                        LIMIT 1
+                        RETURN 1
+                )) > 0
+                """
+            )
+            bind_vars["linked_note_id"] = self._note_id(filters.linked_note_key)
+
+        if filters.tag is not None:
+            filters_list.append("@tag IN n.tags")
+            bind_vars["tag"] = filters.tag
+        if filters.created_from is not None:
+            filters_list.append("n.created_at >= @created_from")
+            bind_vars["created_from"] = filters.created_from
+
+        if filters.created_to is not None:
+            filters_list.append("n.created_at <= @created_to")
+            bind_vars["created_to"] = filters.created_to
+
+        if filters.updated_from is not None:
+            filters_list.append("n.updated_at >= @updated_from")
+            bind_vars["updated_from"] = filters.updated_from
+
+        if filters.updated_to is not None:
+            filters_list.append("n.updated_at <= @updated_to")
+            bind_vars["updated_to"] = filters.updated_to
+
+        if filters.search is not None:
+            filters_list.append(
+                """
+                (
+                    CONTAINS(LOWER(n.title), LOWER(@search)) OR
+                    CONTAINS(LOWER(n.content), LOWER(@search))
+                )
+                """
+            )
+            bind_vars["search"] = filters.search
+
+        return filters_list
 
     def _sync_note_links(self, note_key: str, linked_note_keys: list[str]):
         note_id = self._note_id(note_key)
@@ -141,62 +205,11 @@ class NoteRepository:
         return next(cursor, None) is not None
 
     def get_by_user(self, user_ref: str, filters: NoteFilter) -> list[dict]:
-        filters_list = ["n.user_ref == @user_ref"]
         bind_vars = {
-            "user_ref": user_ref,
             "limit": filters.limit,
             "offset": filters.offset,
         }
-
-        if filters.parent_key == "root":
-            filters_list.append("n.parent_key == null")
-        elif filters.parent_key is not None:
-            filters_list.append("n.parent_key == @parent_key")
-            bind_vars["parent_key"] = filters.parent_key
-
-        if filters.linked_note_key is not None:
-            filters_list.append(
-                """
-                LENGTH((
-                    FOR e IN note_links
-                        FILTER e._from == n._id
-                            AND e._to == @linked_note_id
-                        LIMIT 1
-                        RETURN 1
-                )) > 0
-                """
-            )
-            bind_vars["linked_note_id"] = self._note_id(filters.linked_note_key)
-
-        if filters.tag is not None:
-            filters_list.append("@tag IN n.tags")
-            bind_vars["tag"] = filters.tag
-        if filters.created_from is not None:
-            filters_list.append("n.created_at >= @created_from")
-            bind_vars["created_from"] = filters.created_from
-
-        if filters.created_to is not None:
-            filters_list.append("n.created_at <= @created_to")
-            bind_vars["created_to"] = filters.created_to
-
-        if filters.updated_from is not None:
-            filters_list.append("n.updated_at >= @updated_from")
-            bind_vars["updated_from"] = filters.updated_from
-
-        if filters.updated_to is not None:
-            filters_list.append("n.updated_at <= @updated_to")
-            bind_vars["updated_to"] = filters.updated_to
-
-        if filters.search is not None:
-            filters_list.append(
-                """
-                (
-                    CONTAINS(LOWER(n.title), LOWER(@search)) OR
-                    CONTAINS(LOWER(n.content), LOWER(@search))
-                )
-                """
-            )
-            bind_vars["search"] = filters.search
+        filters_list = self._build_note_filters(user_ref, filters, bind_vars)
 
         query = f"""
         FOR n IN notes
@@ -212,6 +225,62 @@ class NoteRepository:
                 username: u.username,
                 linked_note_keys: linked_note_keys
             }})
+        """
+
+        cursor = self.db.aql.execute(query, bind_vars=bind_vars)
+        return list(cursor)
+
+    def get_stats(self, user_ref: str | None, filters: NoteStatsFilter) -> list[dict]:
+        axis_expressions = {
+            "created_date": '[DATE_FORMAT(n.created_at, "%yyyy-%mm-%dd")]',
+            "updated_date": '[DATE_FORMAT(n.updated_at, "%yyyy-%mm-%dd")]',
+            "tag": 'LENGTH(n.tags) > 0 ? n.tags : ["none"]',
+            "user": "[u.username]",
+            "parent": '[n.parent_key != null ? n.parent_key : "root"]',
+            "linked_note": (
+                "LENGTH(outgoing_link_keys) > 0 ? outgoing_link_keys : ['none']"
+            ),
+            "note": "[n._key]",
+            "none": "[null]",
+        }
+        metric_expressions = {
+            "notes_count": "1",
+            "outgoing_links_count": "LENGTH(outgoing_link_keys)",
+            "incoming_links_count": "LENGTH(incoming_link_keys)",
+            "tags_count": "LENGTH(n.tags)",
+        }
+
+        bind_vars = {"limit": filters.limit}
+        filters_list = self._build_note_filters(user_ref, filters, bind_vars)
+        x_expression = axis_expressions[filters.x_axis]
+        series_expression = axis_expressions[filters.series_axis]
+        metric_expression = metric_expressions[filters.metric]
+
+        query = f"""
+        FOR n IN notes
+            FILTER {" AND ".join(filters_list) if filters_list else "true"}
+            LET u = DOCUMENT("users", n.user_ref)
+            LET outgoing_link_keys = (
+                FOR e IN note_links
+                    FILTER e._from == n._id
+                    RETURN PARSE_IDENTIFIER(e._to).key
+            )
+            LET incoming_link_keys = (
+                FOR e IN note_links
+                    FILTER e._to == n._id
+                    RETURN PARSE_IDENTIFIER(e._from).key
+            )
+            FOR x_value IN {x_expression}
+                FOR series_value IN {series_expression}
+                    COLLECT x = x_value, series = series_value
+                    AGGREGATE value = SUM({metric_expression})
+                    SORT value DESC, x ASC, series ASC
+                    LIMIT @limit
+                    RETURN {{
+                        x: x,
+                        series: series,
+                        value: value
+                    }}
         """
 
         cursor = self.db.aql.execute(query, bind_vars=bind_vars)
