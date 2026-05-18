@@ -237,16 +237,11 @@ class NoteRepository:
             "tag": 'LENGTH(n.tags) > 0 ? n.tags : ["none"]',
             "user": "[u.username]",
             "parent": '[n.parent_key != null ? n.parent_key : "root"]',
-            "linked_note": (
-                "LENGTH(outgoing_link_keys) > 0 ? outgoing_link_keys : ['none']"
-            ),
             "note": "[n._key]",
             "none": "[null]",
         }
         metric_expressions = {
             "notes_count": "1",
-            "outgoing_links_count": "LENGTH(outgoing_link_keys)",
-            "incoming_links_count": "LENGTH(incoming_link_keys)",
             "tags_count": "LENGTH(n.tags)",
         }
 
@@ -260,16 +255,6 @@ class NoteRepository:
         FOR n IN notes
             FILTER {" AND ".join(filters_list) if filters_list else "true"}
             LET u = DOCUMENT("users", n.user_ref)
-            LET outgoing_link_keys = (
-                FOR e IN note_links
-                    FILTER e._from == n._id
-                    RETURN PARSE_IDENTIFIER(e._to).key
-            )
-            LET incoming_link_keys = (
-                FOR e IN note_links
-                    FILTER e._to == n._id
-                    RETURN PARSE_IDENTIFIER(e._from).key
-            )
             FOR x_value IN {x_expression}
                 FOR series_value IN {series_expression}
                     COLLECT x = x_value, series = series_value

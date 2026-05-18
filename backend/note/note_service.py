@@ -27,6 +27,17 @@ from permission.permission_repository import PermissionRepository
 
 
 class NoteService:
+    ALLOWED_STATS_SERIES: dict[tuple[str, str], set[str]] = {
+        ("notes_count", "created_date"): {"none", "user", "tag"},
+        ("notes_count", "updated_date"): {"none", "user", "tag"},
+        ("notes_count", "tag"): {"none", "user", "created_date"},
+        ("notes_count", "user"): {"none", "tag", "created_date"},
+        ("tags_count", "note"): {"none"},
+        ("tags_count", "user"): {"none"},
+        ("tags_count", "created_date"): {"none", "user"},
+        ("tags_count", "updated_date"): {"none", "user"},
+    }
+
     STATS_CHARTS: dict[NoteStatsChart, dict] = {
         "created_by_day": {
             "title": "Созданные заметки по дням",
@@ -52,22 +63,6 @@ class NoteService:
             "metric": "notes_count",
             "admin_only": False,
         },
-        "outgoing_links_by_note": {
-            "title": "Исходящие ссылки по заметкам",
-            "description": "Какие заметки чаще всего ссылаются на другие заметки.",
-            "x_axis": "note",
-            "series_axis": "none",
-            "metric": "outgoing_links_count",
-            "admin_only": False,
-        },
-        "incoming_links_by_note": {
-            "title": "Входящие ссылки по заметкам",
-            "description": "На какие заметки чаще всего ссылаются.",
-            "x_axis": "note",
-            "series_axis": "none",
-            "metric": "incoming_links_count",
-            "admin_only": False,
-        },
         "created_by_day_by_user": {
             "title": "Созданные заметки по дням и пользователям",
             "description": "Сколько заметок каждый пользователь создал в каждый день.",
@@ -90,14 +85,6 @@ class NoteService:
             "x_axis": "tag",
             "series_axis": "user",
             "metric": "notes_count",
-            "admin_only": True,
-        },
-        "links_by_user": {
-            "title": "Ссылки по пользователям",
-            "description": "Сколько ссылок на другие заметки создал каждый пользователь.",
-            "x_axis": "user",
-            "series_axis": "none",
-            "metric": "outgoing_links_count",
             "admin_only": True,
         },
     }
@@ -335,6 +322,8 @@ class NoteService:
         user: User,
         filters: NoteStatsFilter,
     ) -> NoteStatsResponse:
+        self._validate_stats_combination(filters)
+
         if filters.scope == "all" and user.role != UserRole.ADMIN:
             raise HTTPException(403, "Admin access required for all users scope")
 
@@ -354,6 +343,17 @@ class NoteService:
         if scope == "own":
             return user.user_key
         return None
+
+    def _validate_stats_combination(self, filters: NoteStatsFilter):
+        allowed_series = self.ALLOWED_STATS_SERIES.get(
+            (filters.metric, filters.x_axis)
+        )
+        if allowed_series is None or filters.series_axis not in allowed_series:
+            raise HTTPException(
+                400,
+                "Unsupported stats combination. Choose a meaningful x_axis, "
+                "series_axis, and metric combination.",
+            )
 
     def get_available_note_stat_charts(self, user: User) -> NoteStatsAvailableResponse:
         is_admin = user.role == UserRole.ADMIN

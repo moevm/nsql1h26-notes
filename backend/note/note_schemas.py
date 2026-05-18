@@ -7,15 +7,11 @@ NoteStatsAxis = Literal[
     "updated_date",
     "tag",
     "user",
-    "parent",
-    "linked_note",
     "note",
 ]
 NoteStatsSeriesAxis = NoteStatsAxis | Literal["none"]
 NoteStatsMetric = Literal[
     "notes_count",
-    "outgoing_links_count",
-    "incoming_links_count",
     "tags_count",
 ]
 NoteStatsScope = Literal["auto", "own", "all"]
@@ -23,12 +19,9 @@ NoteStatsChart = Literal[
     "created_by_day",
     "updated_by_day",
     "tags_popularity",
-    "outgoing_links_by_note",
-    "incoming_links_by_note",
     "created_by_day_by_user",
     "notes_by_user",
     "tags_by_user",
-    "links_by_user",
 ]
 
 
