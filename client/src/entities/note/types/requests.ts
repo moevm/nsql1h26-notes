@@ -17,6 +17,7 @@ export type CreateNoteRequest = {
     content: string;
     parent_key?: string | null;
     tags: string[];
+    linked_note_keys: string[];
 };
 
 export type UpdateNoteRequest = CreateNoteRequest;

@@ -20,7 +20,7 @@ export function Markdown({ content, className }: MarkdownProps) {
         h4: ({ children }) => <h4 className="text-lg font-semibold tracking-tight">{children}</h4>,
         p: ({ children }) => <p className="whitespace-pre-wrap text-sm leading-7 text-foreground/90">{children}</p>,
         a: ({ children, href }) => (
-          <a href={href} className="text-foreground underline decoration-black/30 underline-offset-4">
+          <a href={href} className="text-blue-700 underline decoration-blue-300 underline-offset-4 hover:text-blue-900">
             {children}
           </a>
         ),
