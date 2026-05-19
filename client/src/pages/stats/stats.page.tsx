@@ -39,7 +39,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { Note } from "@/entities/note/types/dto";
+import { usersProxy } from "@/entities/user/api/users.proxy";
+import type { GetUsersResponse } from "@/entities/user/types/responses";
+import { getErrorMessage } from "@/shared/api/error";
 import { LogNotePickerModal } from "@/pages/logs/ui/log-note-picker-modal";
+import { LogUserPickerModal } from "@/pages/logs/ui/log-user-picker-modal";
 import { formatKey } from "@/pages/logs/ui/helpers";
 import { Header } from "@/shared/layout/Header";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
@@ -77,7 +81,10 @@ type ChartState = {
     loading: boolean;
 };
 
+type UserSummary = GetUsersResponse[number];
+
 type StatsFilters = {
+    user_key: string;
     parent_key: string;
     linked_note_key: string;
     tag: string;
@@ -102,6 +109,7 @@ const TOP_SERIES_COUNT = 5;
 const TOP_BAR_COUNT = 8;
 
 const DEFAULT_STATS_FILTERS: StatsFilters = {
+    user_key: "",
     parent_key: "",
     linked_note_key: "",
     tag: "",
@@ -180,6 +188,7 @@ const toNullableISOString = (value: string) => {
 
 function normalizeStatsFilters(filters: StatsFilters): StatsFilters {
     return {
+        user_key: filters.user_key.trim(),
         parent_key: filters.parent_key.trim(),
         linked_note_key: filters.linked_note_key.trim(),
         tag: filters.tag.trim(),
@@ -193,6 +202,7 @@ function normalizeStatsFilters(filters: StatsFilters): StatsFilters {
 
 function buildStatsFilterParams(filters: StatsFilters) {
     return {
+        user_key: toNullableString(filters.user_key),
         parent_key: toNullableString(filters.parent_key),
         linked_note_key: toNullableString(filters.linked_note_key),
         tag: toNullableString(filters.tag),
@@ -206,6 +216,7 @@ function buildStatsFilterParams(filters: StatsFilters) {
 
 function countActiveStatsFilters(filters: StatsFilters) {
     return [
+        filters.user_key,
         filters.parent_key,
         filters.linked_note_key,
         filters.tag,
@@ -461,6 +472,10 @@ export function StatsPage() {
     const [notePickerTarget, setNotePickerTarget] = useState<
         "parent_key" | "linked_note_key" | null
     >(null);
+    const [userPickerOpen, setUserPickerOpen] = useState(false);
+    const [users, setUsers] = useState<UserSummary[]>([]);
+    const [usersLoading, setUsersLoading] = useState(false);
+    const [usersError, setUsersError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!getAccessToken() && !getRefreshToken()) {
@@ -482,6 +497,10 @@ export function StatsPage() {
         () => new Map(filterNotes.map((note) => [note.note_key, note])),
         [filterNotes],
     );
+    const userMap = useMemo(
+        () => new Map(users.map((user) => [user.user_key, user])),
+        [users],
+    );
 
     const selectedParent =
         statsFilterDraft.parent_key && statsFilterDraft.parent_key !== "root"
@@ -499,6 +518,46 @@ export function StatsPage() {
         ? "Не выбрана"
         : selectedLinkedNote?.title ||
           formatKey(statsFilterDraft.linked_note_key);
+    const userLabel = !statsFilterDraft.user_key
+        ? "Все пользователи"
+        : userMap.get(statsFilterDraft.user_key)?.username ||
+          formatKey(statsFilterDraft.user_key);
+
+    useEffect(() => {
+        if (!userPickerOpen) {
+            return;
+        }
+
+        let alive = true;
+
+        const loadUsers = async () => {
+            setUsersLoading(true);
+            setUsersError(null);
+
+            try {
+                const response = await usersProxy.getUsers();
+
+                if (alive) {
+                    setUsers(response ?? []);
+                }
+            } catch (err) {
+                if (alive) {
+                    setUsersError(getErrorMessage(err));
+                    setUsers([]);
+                }
+            } finally {
+                if (alive) {
+                    setUsersLoading(false);
+                }
+            }
+        };
+
+        void loadUsers();
+
+        return () => {
+            alive = false;
+        };
+    }, [userPickerOpen]);
 
     useEffect(() => {
         let alive = true;
@@ -925,6 +984,27 @@ export function StatsPage() {
                                     </Button>
                                 </label>
 
+                                {isAdmin ? (
+                                    <label className="flex flex-col gap-1 text-sm md:col-span-2">
+                                        <span className="text-muted-foreground">
+                                            Пользователь
+                                        </span>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="justify-between px-3 font-normal"
+                                            onClick={() =>
+                                                setUserPickerOpen(true)
+                                            }
+                                        >
+                                            <span className="truncate">
+                                                {userLabel}
+                                            </span>
+                                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    </label>
+                                ) : null}
+
                                 <label className="flex flex-col gap-1 text-sm">
                                     <span className="text-muted-foreground">
                                         created_from
@@ -1255,6 +1335,24 @@ export function StatsPage() {
                     setNotePickerTarget(null);
                 }}
                 onClose={() => setNotePickerTarget(null)}
+            />
+
+            <LogUserPickerModal
+                open={userPickerOpen}
+                title="Выбор пользователя"
+                users={users}
+                loading={usersLoading}
+                error={usersError}
+                selectedUserKey={statsFilterDraft.user_key}
+                onSelect={(userKey) => {
+                    updateStatsFilterDraft("user_key", userKey);
+                    setUserPickerOpen(false);
+                }}
+                onClear={() => {
+                    updateStatsFilterDraft("user_key", "");
+                    setUserPickerOpen(false);
+                }}
+                onClose={() => setUserPickerOpen(false)}
             />
         </div>
     );

@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { noteProxy } from "@/entities/note/api/proxy";
 import type { Note } from "@/entities/note/types/dto";
+import { usersProxy } from "@/entities/user/api/users.proxy";
+import type { GetUsersResponse } from "@/entities/user/types/responses";
 import { getErrorMessage } from "@/shared/api/error";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
 import { Header } from "@/shared/layout/Header";
@@ -23,6 +25,7 @@ import {
 import { UserLink } from "@/shared/ui/user-link";
 import { formatDate, formatKey } from "@/pages/logs/ui/helpers";
 import { LogNotePickerModal } from "@/pages/logs/ui/log-note-picker-modal";
+import { LogUserPickerModal } from "@/pages/logs/ui/log-user-picker-modal";
 import {
     buildGetNotesRequest,
     countActiveNoteFilters,
@@ -35,8 +38,11 @@ const ADMIN_NOTE_FILTERS: NoteFilters = {
     limit: 50,
 };
 
+type UserSummary = GetUsersResponse[number];
+
 const normalizeFilters = (filters: NoteFilters): NoteFilters => ({
     ...filters,
+    user_key: filters.user_key.trim(),
     parent_key: filters.parent_key.trim(),
     linked_note_key: filters.linked_note_key.trim(),
     tag: filters.tag.trim(),
@@ -71,6 +77,10 @@ export function AdminNotesPage() {
     const [notePickerTarget, setNotePickerTarget] = useState<
         "parent_key" | "linked_note_key" | null
     >(null);
+    const [userPickerOpen, setUserPickerOpen] = useState(false);
+    const [users, setUsers] = useState<UserSummary[]>([]);
+    const [usersLoading, setUsersLoading] = useState(false);
+    const [usersError, setUsersError] = useState<string | null>(null);
 
     useEffect(() => {
         setLimitDraft(String(filters.limit));
@@ -176,6 +186,42 @@ export function AdminNotesPage() {
         };
     }, [notePickerTarget]);
 
+    useEffect(() => {
+        if (!userPickerOpen) {
+            return;
+        }
+
+        let alive = true;
+
+        const loadUsers = async () => {
+            setUsersLoading(true);
+            setUsersError(null);
+
+            try {
+                const response = await usersProxy.getUsers();
+
+                if (alive) {
+                    setUsers(response ?? []);
+                }
+            } catch (err) {
+                if (alive) {
+                    setUsersError(getErrorMessage(err));
+                    setUsers([]);
+                }
+            } finally {
+                if (alive) {
+                    setUsersLoading(false);
+                }
+            }
+        };
+
+        void loadUsers();
+
+        return () => {
+            alive = false;
+        };
+    }, [userPickerOpen]);
+
     const currentPage = useMemo(
         () => Math.floor(filters.offset / filters.limit) + 1,
         [filters.limit, filters.offset],
@@ -209,6 +255,10 @@ export function AdminNotesPage() {
         () => new Map(filterNotes.map((note) => [note.note_key, note])),
         [filterNotes],
     );
+    const userMap = useMemo(
+        () => new Map(users.map((user) => [user.user_key, user])),
+        [users],
+    );
     const selectedParent =
         filterDraft.parent_key && filterDraft.parent_key !== "root"
             ? noteMap.get(filterDraft.parent_key)
@@ -224,6 +274,10 @@ export function AdminNotesPage() {
     const linkedNoteLabel = !filterDraft.linked_note_key
         ? "Не выбрана"
         : selectedLinkedNote?.title || formatKey(filterDraft.linked_note_key);
+    const userLabel = !filterDraft.user_key
+        ? "Все пользователи"
+        : userMap.get(filterDraft.user_key)?.username ||
+          formatKey(filterDraft.user_key);
 
     const logout = () => {
         clearStoredAccessToken();
@@ -437,6 +491,23 @@ export function AdminNotesPage() {
                             <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         </Button>
                     </label>
+
+                    {isAdmin ? (
+                        <label className="grid gap-1.5 text-sm md:col-span-2">
+                            <span className="text-muted-foreground">
+                                Пользователь
+                            </span>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="justify-between px-3 font-normal"
+                                onClick={() => setUserPickerOpen(true)}
+                            >
+                                <span className="truncate">{userLabel}</span>
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                        </label>
+                    ) : null}
 
                     <label className="grid gap-1.5 text-sm">
                         <span className="text-muted-foreground">
@@ -702,6 +773,24 @@ export function AdminNotesPage() {
                     setNotePickerTarget(null);
                 }}
                 onClose={() => setNotePickerTarget(null)}
+            />
+
+            <LogUserPickerModal
+                open={userPickerOpen}
+                title="Выбор пользователя"
+                users={users}
+                loading={usersLoading}
+                error={usersError}
+                selectedUserKey={filterDraft.user_key}
+                onSelect={(userKey) => {
+                    updateFilterDraft("user_key", userKey);
+                    setUserPickerOpen(false);
+                }}
+                onClear={() => {
+                    updateFilterDraft("user_key", "");
+                    setUserPickerOpen(false);
+                }}
+                onClose={() => setUserPickerOpen(false)}
             />
         </div>
     );

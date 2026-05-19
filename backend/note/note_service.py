@@ -319,9 +319,11 @@ class NoteService:
             raise HTTPException(403, "Admin access required to filter by user")
 
     @staticmethod
-    def _resolve_notes_user_ref(user: User, filters: NoteFilter) -> str:
+    def _resolve_notes_user_ref(user: User, filters: NoteFilter) -> str | None:
         if filters.user_key is not None:
             return filters.user_key
+        if user.role == UserRole.ADMIN:
+            return None
         return user.user_key
 
     def get_user_notes(self, user: User, filters: NoteFilter) -> List[NoteResponse]:

@@ -28,9 +28,11 @@ import { noteProxy } from "@/entities/note/api/proxy";
 import type { Note } from "@/entities/note/types/dto";
 import type { CreateNoteRequest } from "@/entities/note/types/requests";
 import { cn } from "@/lib/utils";
+import { buildGetNotesRequest } from "@/pages/note/ui/note-filters";
 import { useNoteLayout } from "@/pages/note/ui/note-layout-context";
 import { NoteShareModal } from "@/pages/note/ui/note-share-modal";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { isAdminRole } from "@/shared/lib/access-token-payload";
 import { UserLink } from "@/shared/ui/user-link";
 
 type NoteEditorMode = "new" | "edit";
@@ -84,6 +86,7 @@ function formatNoteTimestamp(value: string) {
 export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
     const navigate = useNavigate();
     const currentUser = useAccessTokenPayload();
+    const isAdmin = isAdminRole(currentUser?.role);
     const { refreshNotes } = useNoteLayout();
     const {
         getNoteByKey,
@@ -168,10 +171,16 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
 
         const loadAvailableNotes = async () => {
             setAvailableNotesLoading(true);
-            const notes = await noteProxy.getNotes({
-                limit: 256,
-                offset: 0,
-            });
+            const notes = await noteProxy.getNotes(
+                buildGetNotesRequest({
+                    limit: 256,
+                    offset: 0,
+                    user_key:
+                        isAdmin && currentUser?.sub
+                            ? currentUser.sub
+                            : undefined,
+                }),
+            );
 
             if (!alive) {
                 return;
@@ -186,7 +195,7 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
         return () => {
             alive = false;
         };
-    }, []);
+    }, [currentUser?.sub, isAdmin]);
 
     const effectiveParentKey = useMemo(() => {
         if (isEditing) {

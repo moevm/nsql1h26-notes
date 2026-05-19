@@ -1,6 +1,7 @@
 import type { GetNotesRequest } from "@/entities/note/types/requests";
 
 export type NoteFilters = {
+    user_key: string;
     parent_key: string;
     linked_note_key: string;
     tag: string;
@@ -14,6 +15,7 @@ export type NoteFilters = {
 };
 
 export const DEFAULT_NOTE_FILTERS: NoteFilters = {
+    user_key: "",
     parent_key: "",
     linked_note_key: "",
     tag: "",
@@ -26,13 +28,31 @@ export const DEFAULT_NOTE_FILTERS: NoteFilters = {
     offset: 0,
 };
 
-const toNullableString = (value: string) => {
-    const trimmed = value.trim();
+export function mergeNoteFilters(filters: Partial<NoteFilters>): NoteFilters {
+    return {
+        ...DEFAULT_NOTE_FILTERS,
+        ...filters,
+        user_key: filters.user_key ?? "",
+        parent_key: filters.parent_key ?? "",
+        linked_note_key: filters.linked_note_key ?? "",
+        tag: filters.tag ?? "",
+        search: filters.search ?? "",
+        created_from: filters.created_from ?? "",
+        updated_from: filters.updated_from ?? "",
+        created_to: filters.created_to ?? "",
+        updated_to: filters.updated_to ?? "",
+        limit: filters.limit ?? DEFAULT_NOTE_FILTERS.limit,
+        offset: filters.offset ?? DEFAULT_NOTE_FILTERS.offset,
+    };
+}
+
+const toNullableString = (value: string | undefined) => {
+    const trimmed = (value ?? "").trim();
     return trimmed ? trimmed : null;
 };
 
-const toNullableISOString = (value: string) => {
-    const trimmed = value.trim();
+const toNullableISOString = (value: string | undefined) => {
+    const trimmed = (value ?? "").trim();
 
     if (!trimmed) {
         return null;
@@ -47,30 +67,38 @@ const toNullableISOString = (value: string) => {
     return date.toISOString();
 };
 
-export function buildGetNotesRequest(filters: NoteFilters): GetNotesRequest {
+export function buildGetNotesRequest(
+    filters: Partial<NoteFilters>,
+): GetNotesRequest {
+    const resolved = mergeNoteFilters(filters);
+
     return {
-        parent_key: toNullableString(filters.parent_key),
-        linked_note_key: toNullableString(filters.linked_note_key),
-        tag: toNullableString(filters.tag),
-        search: toNullableString(filters.search),
-        created_from: toNullableISOString(filters.created_from),
-        updated_from: toNullableISOString(filters.updated_from),
-        created_to: toNullableISOString(filters.created_to),
-        updated_to: toNullableISOString(filters.updated_to),
-        limit: Math.max(1, filters.limit),
-        offset: Math.max(0, filters.offset),
+        user_key: toNullableString(resolved.user_key),
+        parent_key: toNullableString(resolved.parent_key),
+        linked_note_key: toNullableString(resolved.linked_note_key),
+        tag: toNullableString(resolved.tag),
+        search: toNullableString(resolved.search),
+        created_from: toNullableISOString(resolved.created_from),
+        updated_from: toNullableISOString(resolved.updated_from),
+        created_to: toNullableISOString(resolved.created_to),
+        updated_to: toNullableISOString(resolved.updated_to),
+        limit: Math.max(1, resolved.limit),
+        offset: Math.max(0, resolved.offset),
     };
 }
 
-export function countActiveNoteFilters(filters: NoteFilters) {
+export function countActiveNoteFilters(filters: Partial<NoteFilters>) {
+    const resolved = mergeNoteFilters(filters);
+
     return [
-        filters.parent_key,
-        filters.linked_note_key,
-        filters.tag,
-        filters.search,
-        filters.created_from,
-        filters.updated_from,
-        filters.created_to,
-        filters.updated_to,
+        resolved.user_key,
+        resolved.parent_key,
+        resolved.linked_note_key,
+        resolved.tag,
+        resolved.search,
+        resolved.created_from,
+        resolved.updated_from,
+        resolved.created_to,
+        resolved.updated_to,
     ].filter((value) => value.trim()).length;
 }

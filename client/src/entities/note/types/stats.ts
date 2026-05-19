@@ -54,6 +54,7 @@ export interface NoteStatsResponse {
 
 export interface GetNoteStatsChartRequest {
     chart: NoteStatsChart;
+    user_key?: string | null;
     parent_key?: string | null;
     linked_note_key?: string | null;
     tag?: string | null;
@@ -70,6 +71,7 @@ export interface GetNoteStatsRequest {
     x_axis: NoteStatsAxis;
     series_axis?: NoteStatsSeriesAxis;
     metric: NoteStatsMetric;
+    user_key?: string | null;
     parent_key?: string | null;
     linked_note_key?: string | null;
     tag?: string | null;
