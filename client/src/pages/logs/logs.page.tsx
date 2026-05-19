@@ -427,6 +427,11 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                         onClick: () => navigate("/notes/new"),
                         variant: "outline",
                     },
+                    {
+                        title: "Статистика",
+                        onClick: () => navigate("/stats"),
+                        variant: "outline",
+                    },
                     ...(scope === "admin"
                         ? [
                               {

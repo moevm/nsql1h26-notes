@@ -283,6 +283,11 @@ export const NotePageLayout = () => {
                             onClick: () => navigate("/logs/my"),
                             variant: "secondary",
                         },
+                        {
+                            title: "Статистика",
+                            onClick: () => navigate("/stats"),
+                            variant: "outline",
+                        },
                         ...(isAdmin
                             ? [
                                   {

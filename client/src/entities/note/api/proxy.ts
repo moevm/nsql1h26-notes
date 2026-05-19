@@ -8,6 +8,11 @@ import {
     GetNotesResponse,
     UpdateNoteResponse,
 } from "@/entities/note/types/responses";
+import type {
+    GetNoteStatsChartRequest,
+    NoteStatsAvailableResponse,
+    NoteStatsChartResponse,
+} from "@/entities/note/types/stats";
 import { authRequest } from "@/shared/api/http";
 import { AxiosResponse } from "axios";
 import { Note } from "@/entities/note/types/dto";
@@ -56,6 +61,40 @@ class NotesProxy {
             });
             return response.data;
         } catch (e) {
+            return null;
+        }
+    };
+
+    public getAvailableStatsCharts =
+        async (): Promise<NoteStatsAvailableResponse> => {
+            try {
+                const response: AxiosResponse<NoteStatsAvailableResponse> =
+                    await authRequest<NoteStatsAvailableResponse>({
+                        url: `${this.BASE_URL}/stats/available`,
+                        method: "GET",
+                    });
+
+                return response.data;
+            } catch (e) {
+                console.log("[ERROR] while getting available note stats", e);
+                return { charts: [] };
+            }
+        };
+
+    public getStatsChart = async (
+        params: GetNoteStatsChartRequest,
+    ): Promise<NoteStatsChartResponse | null> => {
+        try {
+            const response: AxiosResponse<NoteStatsChartResponse> =
+                await authRequest<NoteStatsChartResponse>({
+                    url: `${this.BASE_URL}/stats/chart`,
+                    method: "GET",
+                    params,
+                });
+
+            return response.data;
+        } catch (e) {
+            console.log("[ERROR] while getting note stats chart", e);
             return null;
         }
     };

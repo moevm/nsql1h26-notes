@@ -8,6 +8,7 @@ import { NotePage } from "@/pages/note/note.page";
 import { NotePageLayout } from "@/pages/note/ui/layout";
 import { LogsPage } from "@/pages/logs/logs.page";
 import { SharePage } from "@/pages/share/share.page";
+import { StatsPage } from "@/pages/stats/stats.page";
 
 function App() {
     return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/logs" element={<Navigate replace to="/logs/my" />} />
             <Route path="/logs/my" element={<LogsPage scope="my" />} />
             <Route path="/admin/logs" element={<LogsPage scope="admin" />} />
+            <Route path="/stats" element={<StatsPage />} />
             <Route path="/share/:shareKey" element={<SharePage />} />
             <Route path="*" element={<NotFoundPage />} />
         </Routes>
