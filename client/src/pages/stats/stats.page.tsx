@@ -86,7 +86,6 @@ type StatsFilters = {
     created_to: string;
     updated_from: string;
     updated_to: string;
-    limit: number;
 };
 
 type FlatPoint = {
@@ -111,7 +110,6 @@ const DEFAULT_STATS_FILTERS: StatsFilters = {
     created_to: "",
     updated_from: "",
     updated_to: "",
-    limit: 100,
 };
 
 const axisLabels: Record<NoteStatsAxis, string> = {
@@ -190,7 +188,6 @@ function normalizeStatsFilters(filters: StatsFilters): StatsFilters {
         created_to: filters.created_to.trim(),
         updated_from: filters.updated_from.trim(),
         updated_to: filters.updated_to.trim(),
-        limit: Math.min(500, Math.max(1, filters.limit)),
     };
 }
 
@@ -204,7 +201,6 @@ function buildStatsFilterParams(filters: StatsFilters) {
         created_to: toNullableISOString(filters.created_to),
         updated_from: toNullableISOString(filters.updated_from),
         updated_to: toNullableISOString(filters.updated_to),
-        limit: Math.min(500, Math.max(1, filters.limit)),
     };
 }
 
@@ -993,29 +989,7 @@ export function StatsPage() {
                                     />
                                 </label>
 
-                                <label className="flex flex-col gap-1 text-sm">
-                                    <span className="text-muted-foreground">
-                                        limit
-                                    </span>
-                                    <Input
-                                        type="number"
-                                        min={1}
-                                        max={500}
-                                        step={1}
-                                        value={statsFilterDraft.limit}
-                                        onChange={(event) =>
-                                            updateStatsFilterDraft(
-                                                "limit",
-                                                Number.parseInt(
-                                                    event.target.value,
-                                                    10,
-                                                ) || 1,
-                                            )
-                                        }
-                                    />
-                                </label>
-
-                                <div className="flex flex-wrap items-end gap-2 md:col-span-3">
+                                <div className="flex flex-wrap items-end gap-2 md:col-span-4">
                                     <Button type="submit">
                                         Применить фильтр
                                     </Button>

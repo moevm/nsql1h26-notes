@@ -62,11 +62,8 @@ export function buildGetNotesRequest(filters: NoteFilters): GetNotesRequest {
     };
 }
 
-export function countActiveNoteFilters(
-    filters: NoteFilters,
-    defaults: NoteFilters = DEFAULT_NOTE_FILTERS,
-) {
-    const textFilters = [
+export function countActiveNoteFilters(filters: NoteFilters) {
+    return [
         filters.parent_key,
         filters.linked_note_key,
         filters.tag,
@@ -76,11 +73,4 @@ export function countActiveNoteFilters(
         filters.created_to,
         filters.updated_to,
     ].filter((value) => value.trim()).length;
-
-    const pagingFilters =
-        filters.limit !== defaults.limit || filters.offset !== defaults.offset
-            ? 1
-            : 0;
-
-    return textFilters + pagingFilters;
 }

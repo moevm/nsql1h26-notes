@@ -1,4 +1,10 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import {
+    type FormEvent,
+    type KeyboardEvent,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 import { ChevronDown, FileText, Loader2, RotateCcw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -58,9 +64,17 @@ export function AdminNotesPage() {
     const [filterNotesError, setFilterNotesError] = useState<string | null>(
         null,
     );
+    const [lastPageOffset, setLastPageOffset] = useState<number | null>(null);
+    const [limitDraft, setLimitDraft] = useState(
+        String(ADMIN_NOTE_FILTERS.limit),
+    );
     const [notePickerTarget, setNotePickerTarget] = useState<
         "parent_key" | "linked_note_key" | null
     >(null);
+
+    useEffect(() => {
+        setLimitDraft(String(filters.limit));
+    }, [filters.limit]);
 
     useEffect(() => {
         let alive = true;
@@ -70,12 +84,39 @@ export function AdminNotesPage() {
             setError(null);
 
             try {
+                const requestedOffset = filters.offset;
                 const response = await noteProxy.getNotes({
                     ...buildGetNotesRequest(filters),
                 });
 
                 if (alive) {
+                    if (requestedOffset > 0 && response.length === 0) {
+                        const fallbackOffset = Math.max(
+                            0,
+                            requestedOffset - filters.limit,
+                        );
+
+                        setLastPageOffset(fallbackOffset);
+                        setFilters((current) =>
+                            current.offset === requestedOffset
+                                ? { ...current, offset: fallbackOffset }
+                                : current,
+                        );
+                        return;
+                    }
+
                     setNotes(response ?? []);
+                    setLastPageOffset((current) => {
+                        if (response.length < filters.limit) {
+                            return requestedOffset;
+                        }
+
+                        if (current !== null && requestedOffset <= current) {
+                            return current;
+                        }
+
+                        return null;
+                    });
                 }
             } catch (err) {
                 if (alive) {
@@ -139,9 +180,29 @@ export function AdminNotesPage() {
         () => Math.floor(filters.offset / filters.limit) + 1,
         [filters.limit, filters.offset],
     );
-    const hasNextPage = notes.length === filters.limit;
+    const hasNextPage =
+        lastPageOffset !== null
+            ? filters.offset < lastPageOffset
+            : notes.length === filters.limit;
+    const pageNumbers = useMemo(() => {
+        const pages = new Set<number>([1, currentPage]);
+
+        if (currentPage > 1) {
+            pages.add(currentPage - 1);
+        }
+
+        if (currentPage > 2) {
+            pages.add(currentPage - 2);
+        }
+
+        if (hasNextPage) {
+            pages.add(currentPage + 1);
+        }
+
+        return Array.from(pages).sort((left, right) => left - right);
+    }, [currentPage, hasNextPage]);
     const activeFiltersCount = useMemo(
-        () => countActiveNoteFilters(filters, ADMIN_NOTE_FILTERS),
+        () => countActiveNoteFilters(filters),
         [filters],
     );
     const noteMap = useMemo(
@@ -186,13 +247,78 @@ export function AdminNotesPage() {
             ...filterDraft,
             offset: 0,
         });
+        setLastPageOffset(null);
         setFilterDraft(normalized);
         setFilters(normalized);
     };
 
     const resetFilters = () => {
+        setLastPageOffset(null);
         setFilterDraft(ADMIN_NOTE_FILTERS);
         setFilters(ADMIN_NOTE_FILTERS);
+    };
+
+    const previousPage = () => {
+        setFilters((current) => ({
+            ...current,
+            offset: Math.max(0, current.offset - current.limit),
+        }));
+    };
+
+    const nextPage = () => {
+        setFilters((current) => ({
+            ...current,
+            offset: current.offset + current.limit,
+        }));
+    };
+
+    const goToPage = (page: number) => {
+        setFilters((current) => ({
+            ...current,
+            offset:
+                lastPageOffset !== null &&
+                (page - 1) * current.limit > lastPageOffset
+                    ? current.offset
+                    : (page - 1) * current.limit,
+        }));
+    };
+
+    const updateLimit = (limit: number) => {
+        const nextLimit = Math.max(1, Math.floor(limit));
+
+        setLastPageOffset(null);
+        setFilterDraft((current) => ({
+            ...current,
+            limit: nextLimit,
+            offset: 0,
+        }));
+        setFilters((current) => ({
+            ...current,
+            limit: nextLimit,
+            offset: 0,
+        }));
+    };
+
+    const commitLimit = () => {
+        const nextLimit = Number.parseInt(limitDraft, 10);
+
+        if (!Number.isFinite(nextLimit) || nextLimit < 1) {
+            setLimitDraft(String(filters.limit));
+            return;
+        }
+
+        if (nextLimit !== filters.limit) {
+            updateLimit(nextLimit);
+        }
+    };
+
+    const handleLimitKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        if (event.key !== "Enter") {
+            return;
+        }
+
+        event.preventDefault();
+        commitLimit();
     };
 
     return (
@@ -376,25 +502,7 @@ export function AdminNotesPage() {
                         />
                     </label>
 
-                    <label className="grid gap-1.5 text-sm">
-                        <span className="text-muted-foreground">limit</span>
-                        <Input
-                            type="number"
-                            min={1}
-                            max={256}
-                            step={1}
-                            value={filterDraft.limit}
-                            onChange={(event) =>
-                                updateFilterDraft(
-                                    "limit",
-                                    Number.parseInt(event.target.value, 10) ||
-                                        1,
-                                )
-                            }
-                        />
-                    </label>
-
-                    <div className="flex flex-wrap items-end gap-2 md:col-span-3">
+                    <div className="flex flex-wrap items-end gap-2 md:col-span-4">
                         <Button type="submit">Применить фильтр</Button>
                         <Button
                             type="button"
@@ -512,42 +620,65 @@ export function AdminNotesPage() {
                     </div>
                 )}
 
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3 border-t border-black/10 pt-6">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={loading || filters.offset === 0}
-                        onClick={() =>
-                            setFilters((current) => ({
-                                ...current,
-                                offset: Math.max(
-                                    0,
-                                    current.offset - current.limit,
-                                ),
-                            }))
-                        }
-                    >
-                        Назад
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={loading || !hasNextPage}
-                        onClick={() =>
-                            setFilters((current) => ({
-                                ...current,
-                                offset: current.offset + current.limit,
-                            }))
-                        }
-                    >
-                        Дальше
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                        Записей на странице: {filters.limit}
-                    </span>
-                </div>
+                {notes.length ? (
+                    <div className="mt-6 border-t border-black/10 pt-6">
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={loading || filters.offset === 0}
+                                onClick={previousPage}
+                            >
+                                Назад
+                            </Button>
+
+                            {pageNumbers.map((page) => (
+                                <Button
+                                    key={page}
+                                    type="button"
+                                    variant={
+                                        page === currentPage
+                                            ? "default"
+                                            : "outline"
+                                    }
+                                    size="sm"
+                                    disabled={loading}
+                                    onClick={() => goToPage(page)}
+                                    className="min-w-10"
+                                >
+                                    {page}
+                                </Button>
+                            ))}
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={loading || !hasNextPage}
+                                onClick={nextPage}
+                            >
+                                Дальше
+                            </Button>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
+                            <span>Записей на странице</span>
+                            <Input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={limitDraft}
+                                onChange={(event) =>
+                                    setLimitDraft(event.target.value)
+                                }
+                                onBlur={commitLimit}
+                                onKeyDown={handleLimitKeyDown}
+                                className="w-24 text-center"
+                            />
+                        </div>
+                    </div>
+                ) : null}
             </main>
 
             <LogNotePickerModal
