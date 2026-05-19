@@ -17,3 +17,12 @@ def get_logs(
     service: LogService = Depends(get_log_service)
 ) -> List[LogResponse]:
     return service.get_user_logs(user,filters)
+
+
+@router.get("/{log_key}", response_model=LogResponse)
+def get_log(
+    log_key: str,
+    user=Depends(get_current_user),
+    service: LogService = Depends(get_log_service),
+) -> LogResponse:
+    return service.get_log(log_key, user)
