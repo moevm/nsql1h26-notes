@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from model.user import User
 from user.user_dependencies import get_user_service
-from user.user_schemas import UserResponse
+from user.user_schemas import UserResponse, UserDetailsResponse
 from user.user_service import UserService
 from auth.auth_dependencies import get_current_user_key, get_current_user
 
@@ -24,3 +24,11 @@ def get_users(
     service: UserService = Depends(get_user_service)
 ) -> List[UserResponse]:
     return service.get_all_users(user)
+
+@router.get("/{user_key}", response_model=UserDetailsResponse)
+def get_user(
+    user_key: str,
+    _: User = Depends(get_current_user),
+    service: UserService = Depends(get_user_service),
+):
+    return service.get_user_details(user_key)

@@ -20,9 +20,8 @@ from log.log_schemas import (
 
 class LogService:
 
-    def __init__(self, repo: LogRepository, user_service: UserService):
+    def __init__(self, repo: LogRepository):
         self.repo = repo
-        self.user_service = user_service
         self._handlers = {
             LogType.REGISTRATION: self._to_registration_response,
             LogType.NOTE: self._to_note_response,
@@ -99,22 +98,6 @@ class LogService:
         )
         return self._to_note_response(log)
 
-    def create_permission_log(
-        self, granted_by_ref: str, granted_to_username: str, data: PermissionLogCreate
-    ):
-        granted_to_ref = self.user_service.get_user_key_by_username(granted_to_username)
-
-        log = self.repo.create(
-            {
-                **data.model_dump(),
-                "type": LogType.PERMISSION,
-                "granted_by_key": granted_by_ref,
-                "granted_to_key": granted_to_ref,
-            }
-        )
-
-        return self._to_permission_response(log)
-
     def get_user_logs(self, user: User, filters: LogFilter) -> List[LogResponse]:
         if user.role == UserRole.ADMIN:
             raw_logs = self.repo.get_all(filters)
@@ -141,3 +124,18 @@ class LogService:
             }
         )
         return self._to_permission_response(log)
+
+    def get_log(self, log_key: str, user: User) -> LogResponse:
+        log = self.repo.get_by_key(log_key)
+        if not log:
+            raise HTTPException(404, "Log not found")
+        if user.role != UserRole.ADMIN:
+            allowed = (
+                    log.get("user_key") == user.user_key
+                    or log.get("granted_by_key") == user.user_key
+                    or log.get("granted_to_key") == user.user_key
+            )
+
+            if not allowed:
+                raise HTTPException(403, "Access denied")
+        return self._to_response(log)

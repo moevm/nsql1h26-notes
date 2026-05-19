@@ -270,3 +270,17 @@ class NoteRepository:
 
         cursor = self.db.aql.execute(query, bind_vars=bind_vars)
         return list(cursor)
+
+    def count_notes_by_user_key(self, user_key: str) -> int:
+        query = """
+        RETURN LENGTH(
+            FOR n IN notes
+                FILTER n.user_ref == @user_key
+                RETURN 1
+        )
+        """
+        cursor = self.db.aql.execute(
+            query,
+            bind_vars={"user_key": user_key},
+        )
+        return next(cursor)
