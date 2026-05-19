@@ -20,9 +20,8 @@ from log.log_schemas import (
 
 class LogService:
 
-    def __init__(self, repo: LogRepository, user_service: UserService):
+    def __init__(self, repo: LogRepository):
         self.repo = repo
-        self.user_service = user_service
         self._handlers = {
             LogType.REGISTRATION: self._to_registration_response,
             LogType.NOTE: self._to_note_response,
@@ -98,22 +97,6 @@ class LogService:
             }
         )
         return self._to_note_response(log)
-
-    def create_permission_log(
-        self, granted_by_ref: str, granted_to_username: str, data: PermissionLogCreate
-    ):
-        granted_to_ref = self.user_service.get_user_key_by_username(granted_to_username)
-
-        log = self.repo.create(
-            {
-                **data.model_dump(),
-                "type": LogType.PERMISSION,
-                "granted_by_key": granted_by_ref,
-                "granted_to_key": granted_to_ref,
-            }
-        )
-
-        return self._to_permission_response(log)
 
     def get_user_logs(self, user: User, filters: LogFilter) -> List[LogResponse]:
         if user.role == UserRole.ADMIN:

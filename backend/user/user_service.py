@@ -5,14 +5,16 @@ from fastapi import HTTPException
 from auth.auth_schemas import UserRole
 from core.security import hash_password
 from model.user import User
+from note.note_repository import NoteRepository
 from user.user_repository import UserRepository
-from user.user_schemas import UserResponse
+from user.user_schemas import UserResponse, UserDetailsResponse
 
 
 class UserService:
 
-    def __init__(self, user_repo: UserRepository):
+    def __init__(self, user_repo: UserRepository, note_repo: NoteRepository):
         self.user_repo = user_repo
+        self.note_repo = note_repo
 
     def get_all_users(self, user: User) -> List[UserResponse]:
         if user.role != UserRole.ADMIN:
@@ -49,3 +51,16 @@ class UserService:
             raise HTTPException(404, "User not found")
 
         return user.user_key
+
+    def get_user_details(self, user_key: str) -> UserDetailsResponse:
+        user = self.user_repo.get_by_key(user_key)
+        if not user:
+            raise HTTPException(404, "User not found")
+
+        notes_count = self.note_repo.count_notes_by_user_key(user_key)
+        return UserDetailsResponse(
+            user_key=user.user_key,
+            username=user.username,
+            role=user.role,
+            notes_count=notes_count,
+        )
