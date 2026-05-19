@@ -124,3 +124,18 @@ class LogService:
             }
         )
         return self._to_permission_response(log)
+
+    def get_log(self, log_key: str, user: User) -> LogResponse:
+        log = self.repo.get_by_key(log_key)
+        if not log:
+            raise HTTPException(404, "Log not found")
+        if user.role != UserRole.ADMIN:
+            allowed = (
+                    log.get("user_key") == user.user_key
+                    or log.get("granted_by_key") == user.user_key
+                    or log.get("granted_to_key") == user.user_key
+            )
+
+            if not allowed:
+                raise HTTPException(403, "Access denied")
+        return self._to_response(log)
