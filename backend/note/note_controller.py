@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends
 
-from auth.auth_dependencies import get_current_user_key, get_current_user
+from auth.auth_dependencies import get_current_user
 from model.user import User
 from note.note_schemas import (
     NoteCreate,
@@ -24,11 +24,11 @@ router = APIRouter(prefix="/api/notes", tags=["Notes"])
 
 @router.get("", response_model=List[NoteResponse])
 def get_notes(
-        user_key: str = Depends(get_current_user_key),
+        user: User = Depends(get_current_user),
         filters: NoteFilter = Depends(),
-        service: NoteService = Depends(get_note_service)
+        service: NoteService = Depends(get_note_service),
 ) -> List[NoteResponse]:
-    return service.get_user_notes(user_key, filters)
+    return service.get_user_notes(user, filters)
 
 
 @router.post("", response_model=NoteResponse)
