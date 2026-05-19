@@ -35,6 +35,7 @@ class NoteSnapshot(BaseModel):
     content: str
     parent_key: str | None
     tags: list[str]
+    linked_note_keys: list[str] = Field(default_factory=list)
 
 
 class NotesLogCreate(BaseModel):
