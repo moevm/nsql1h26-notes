@@ -9,9 +9,11 @@ import {
     UpdateNoteResponse,
 } from "@/entities/note/types/responses";
 import type {
+    GetNoteStatsRequest,
     GetNoteStatsChartRequest,
     NoteStatsAvailableResponse,
     NoteStatsChartResponse,
+    NoteStatsResponse,
 } from "@/entities/note/types/stats";
 import { authRequest } from "@/shared/api/http";
 import { AxiosResponse } from "axios";
@@ -95,6 +97,24 @@ class NotesProxy {
             return response.data;
         } catch (e) {
             console.log("[ERROR] while getting note stats chart", e);
+            return null;
+        }
+    };
+
+    public getStats = async (
+        params: GetNoteStatsRequest,
+    ): Promise<NoteStatsResponse | null> => {
+        try {
+            const response: AxiosResponse<NoteStatsResponse> =
+                await authRequest<NoteStatsResponse>({
+                    url: `${this.BASE_URL}/stats`,
+                    method: "GET",
+                    params,
+                });
+
+            return response.data;
+        } catch (e) {
+            console.log("[ERROR] while getting note stats", e);
             return null;
         }
     };

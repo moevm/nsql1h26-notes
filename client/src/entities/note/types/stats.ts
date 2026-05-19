@@ -45,8 +45,23 @@ export interface NoteStatsChartResponse {
     title: string;
 }
 
+export interface NoteStatsResponse {
+    x_axis: NoteStatsAxis;
+    series_axis: NoteStatsSeriesAxis;
+    metric: NoteStatsMetric;
+    points: NoteStatsPoint[];
+}
+
 export interface GetNoteStatsChartRequest {
     chart: NoteStatsChart;
+    scope?: NoteStatsScope;
+    limit?: number;
+}
+
+export interface GetNoteStatsRequest {
+    x_axis: NoteStatsAxis;
+    series_axis?: NoteStatsSeriesAxis;
+    metric: NoteStatsMetric;
     scope?: NoteStatsScope;
     limit?: number;
 }

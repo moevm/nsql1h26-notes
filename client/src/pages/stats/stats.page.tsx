@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {useEffect, useMemo, useState} from "react";
+import {useNavigate} from "react-router-dom";
 import {
     Area,
     AreaChart,
@@ -15,32 +15,27 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
-import { BarChart3, Loader2 } from "lucide-react";
+import {BarChart3, Loader2} from "lucide-react";
 
-import { noteProxy } from "@/entities/note/api/proxy";
+import {noteProxy} from "@/entities/note/api/proxy";
 import type {
+    NoteStatsAxis,
     NoteStatsChart,
     NoteStatsChartInfo,
     NoteStatsChartResponse,
+    NoteStatsMetric,
     NoteStatsPoint,
+    NoteStatsResponse,
+    NoteStatsScope,
+    NoteStatsSeriesAxis,
 } from "@/entities/note/types/stats";
-import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Header } from "@/shared/layout/Header";
-import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
-import { isAdminRole } from "@/shared/lib/access-token-payload";
-import { getAccessToken, setAccessToken } from "@/shared/lib/auth-state";
-import {
-    clearRefreshToken,
-    clearStoredAccessToken,
-    getRefreshToken,
-} from "@/shared/lib/token-storage";
+import {Button} from "@/components/ui/button";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card";
+import {Header} from "@/shared/layout/Header";
+import {useAccessTokenPayload} from "@/shared/hooks/use-access-token-payload";
+import {isAdminRole} from "@/shared/lib/access-token-payload";
+import {getAccessToken, setAccessToken} from "@/shared/lib/auth-state";
+import {clearRefreshToken, clearStoredAccessToken, getRefreshToken,} from "@/shared/lib/token-storage";
 
 const chartOrder: NoteStatsChart[] = [
     "created_by_day",
@@ -80,6 +75,51 @@ type PivotRow = {
 
 const TOP_SERIES_COUNT = 5;
 const TOP_BAR_COUNT = 8;
+
+const axisLabels: Record<NoteStatsAxis, string> = {
+    created_date: "Дата создания",
+    updated_date: "Дата обновления",
+    tag: "Тег",
+    user: "Пользователь",
+    note: "Заметка",
+};
+
+const seriesLabels: Record<NoteStatsSeriesAxis, string> = {
+    ...axisLabels,
+    none: "Без группировки",
+};
+
+const metricLabels: Record<NoteStatsMetric, string> = {
+    notes_count: "Количество заметок",
+    tags_count: "Количество тегов",
+};
+
+const scopeLabels: Record<NoteStatsScope, string> = {
+    auto: "Автоматически",
+    own: "Мои данные",
+    all: "Все данные",
+};
+
+const allowedCustomStats: Record<
+    NoteStatsMetric,
+    Partial<Record<NoteStatsAxis, NoteStatsSeriesAxis[]>>
+> = {
+    notes_count: {
+        created_date: ["none", "user"],
+        updated_date: ["none", "user"],
+        tag: ["none"],
+        user: ["none"],
+    },
+    tags_count: {
+        note: ["none"],
+        user: ["none"],
+        created_date: ["none"],
+        updated_date: ["none"],
+    },
+};
+
+const selectClassName =
+    "h-10 rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none transition-colors focus:border-primary";
 
 function formatLabel(value: string | null) {
     if (!value) {
@@ -164,7 +204,11 @@ function getTotal(points: NoteStatsPoint[]) {
     return points.reduce((sum, point) => sum + point.value, 0);
 }
 
-function ChartBody({ chart }: { chart: NoteStatsChartResponse }) {
+function ChartBody({
+    chart,
+}: {
+    chart: NoteStatsResponse & { chart?: NoteStatsChart };
+}) {
     const flatPoints = useMemo(() => getFlatPoints(chart.points), [chart.points]);
     const topFlatPoints = useMemo(() => getTopFlatPoints(flatPoints), [flatPoints]);
     const pivot = useMemo(() => getPivotRows(chart.points), [chart.points]);
@@ -177,7 +221,11 @@ function ChartBody({ chart }: { chart: NoteStatsChartResponse }) {
         );
     }
 
-    if (chart.chart === "notes_by_user" || chart.chart === "tags_by_user") {
+    if (
+        chart.chart === "notes_by_user" ||
+        chart.chart === "tags_by_user" ||
+        (chart.x_axis === "user" && chart.series_axis === "none")
+    ) {
         return (
             <div className="space-y-3">
                 <ResponsiveContainer width="100%" height={300}>
@@ -233,7 +281,7 @@ function ChartBody({ chart }: { chart: NoteStatsChartResponse }) {
         );
     }
 
-    if (chart.chart === "tags_popularity") {
+    if (chart.chart === "tags_popularity" || chart.x_axis === "tag") {
         return (
             <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -279,6 +327,19 @@ export function StatsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [charts, setCharts] = useState<ChartState[]>([]);
+    const [mode, setMode] = useState<"ready" | "custom">("ready");
+    const [customMetric, setCustomMetric] =
+        useState<NoteStatsMetric>("notes_count");
+    const [customXAxis, setCustomXAxis] =
+        useState<NoteStatsAxis>("created_date");
+    const [customSeriesAxis, setCustomSeriesAxis] =
+        useState<NoteStatsSeriesAxis>("none");
+    const [customScope, setCustomScope] = useState<NoteStatsScope>("auto");
+    const [customStats, setCustomStats] = useState<NoteStatsResponse | null>(
+        null,
+    );
+    const [customLoading, setCustomLoading] = useState(false);
+    const [customError, setCustomError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!getAccessToken() && !getRefreshToken()) {
@@ -347,6 +408,83 @@ export function StatsPage() {
             alive = false;
         };
     }, [isAdmin]);
+
+    const availableCustomXAxes = useMemo(
+        () =>
+            Object.keys(allowedCustomStats[customMetric]) as NoteStatsAxis[],
+        [customMetric],
+    );
+
+    const availableCustomSeriesAxes = useMemo(
+        () =>
+            (allowedCustomStats[customMetric][customXAxis] ?? [
+                "none",
+            ]) as NoteStatsSeriesAxis[],
+        [customMetric, customXAxis],
+    );
+
+    useEffect(() => {
+        const nextAxes = Object.keys(
+            allowedCustomStats[customMetric],
+        ) as NoteStatsAxis[];
+
+        if (!nextAxes.includes(customXAxis)) {
+            setCustomXAxis(nextAxes[0]);
+            return;
+        }
+
+        const nextSeries = allowedCustomStats[customMetric][customXAxis] ?? [
+            "none",
+        ];
+
+        if (!nextSeries.includes(customSeriesAxis)) {
+            setCustomSeriesAxis(nextSeries[0]);
+        }
+    }, [customMetric, customSeriesAxis, customXAxis]);
+
+    useEffect(() => {
+        if (mode !== "custom") {
+            return;
+        }
+
+        let alive = true;
+
+        const loadCustomStats = async () => {
+            setCustomLoading(true);
+            setCustomError(null);
+
+            const result = await noteProxy.getStats({
+                metric: customMetric,
+                x_axis: customXAxis,
+                series_axis: customSeriesAxis,
+                scope: isAdmin ? customScope : "auto",
+                limit: 120,
+            });
+
+            if (!alive) {
+                return;
+            }
+
+            setCustomStats(result);
+            if (!result) {
+                setCustomError("Такая комбинация параметров недоступна");
+            }
+            setCustomLoading(false);
+        };
+
+        void loadCustomStats();
+
+        return () => {
+            alive = false;
+        };
+    }, [
+        customMetric,
+        customScope,
+        customSeriesAxis,
+        customXAxis,
+        isAdmin,
+        mode,
+    ]);
 
     const totals = useMemo(() => {
         const notesTotal =
@@ -445,14 +583,141 @@ export function StatsPage() {
                         </Card>
                     ) : null}
 
-                    {loading && !charts.length ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            variant={mode === "ready" ? "default" : "outline"}
+                            onClick={() => setMode("ready")}
+                        >
+                            Готовые графики
+                        </Button>
+                        <Button
+                            variant={mode === "custom" ? "default" : "outline"}
+                            onClick={() => setMode("custom")}
+                        >
+                            Свой график
+                        </Button>
+                    </div>
+
+                    {mode === "custom" ? (
+                        <Card>
+                            <CardHeader className="p-5">
+                                <CardTitle className="text-lg">
+                                    Конструктор графика
+                                </CardTitle>
+                                <CardDescription>
+                                    Данные берутся из универсальной ручки
+                                    статистики. Выберите метрику, ось и
+                                    группировку.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-5 p-5 pt-0">
+                                <div className="grid gap-3 md:grid-cols-4">
+                                    <label className="flex flex-col gap-1 text-sm">
+                                        <span className="text-muted-foreground">
+                                            Метрика
+                                        </span>
+                                        <select
+                                            className={selectClassName}
+                                            value={customMetric}
+                                            onChange={(event) =>
+                                                setCustomMetric(
+                                                    event.target
+                                                        .value as NoteStatsMetric,
+                                                )
+                                            }
+                                        >
+                                            {Object.entries(metricLabels).map(
+                                                ([value, label]) => (
+                                                    <option
+                                                        key={value}
+                                                        value={value}
+                                                    >
+                                                        {label}
+                                                    </option>
+                                                ),
+                                            )}
+                                        </select>
+                                    </label>
+
+                                    <label className="flex flex-col gap-1 text-sm">
+                                        <span className="text-muted-foreground">
+                                            Ось X
+                                        </span>
+                                        <select
+                                            className={selectClassName}
+                                            value={customXAxis}
+                                            onChange={(event) =>
+                                                setCustomXAxis(
+                                                    event.target
+                                                        .value as NoteStatsAxis,
+                                                )
+                                            }
+                                        >
+                                            {availableCustomXAxes.map((axis) => (
+                                                <option key={axis} value={axis}>
+                                                    {axisLabels[axis]}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+
+                                    <label className="flex flex-col gap-1 text-sm">
+                                        <span className="text-muted-foreground">
+                                            Данные
+                                        </span>
+                                        <select
+                                            className={selectClassName}
+                                            value={customScope}
+                                            disabled={!isAdmin}
+                                            onChange={(event) =>
+                                                setCustomScope(
+                                                    event.target
+                                                        .value as NoteStatsScope,
+                                                )
+                                            }
+                                        >
+                                            {Object.entries(scopeLabels).map(
+                                                ([value, label]) => (
+                                                    <option
+                                                        key={value}
+                                                        value={value}
+                                                    >
+                                                        {label}
+                                                    </option>
+                                                ),
+                                            )}
+                                        </select>
+                                    </label>
+                                </div>
+
+                                {customLoading ? (
+                                    <div className="flex h-[300px] items-center justify-center gap-2 text-sm text-muted-foreground">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Строим график...
+                                    </div>
+                                ) : customError ? (
+                                    <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed border-red-200 bg-red-50 text-sm text-red-700">
+                                        {customError}
+                                    </div>
+                                ) : customStats ? (
+                                    <ChartBody chart={customStats} />
+                                ) : (
+                                    <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+                                        Выберите параметры графика
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    ) : null}
+
+                    {mode === "ready" && loading && !charts.length ? (
                         <div className="flex h-72 items-center justify-center gap-2 text-sm text-muted-foreground">
                             <Loader2 className="h-4 w-4 animate-spin" />
                             Загрузка статистики...
                         </div>
                     ) : null}
 
-                    {!loading && !charts.length ? (
+                    {mode === "ready" && !loading && !charts.length ? (
                         <Card>
                             <CardContent className="flex h-72 flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">
                                 <BarChart3 className="h-9 w-9" />
@@ -469,41 +734,48 @@ export function StatsPage() {
                         </Card>
                     ) : null}
 
-                    <section className="grid gap-5 xl:grid-cols-2">
-                        {charts.map(({ info, data, loading: chartLoading }) => (
-                            <Card key={info.chart}>
-                                <CardHeader className="p-5">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="min-w-0">
-                                            <CardTitle className="text-lg leading-tight">
-                                                {data?.title ?? info.title}
-                                            </CardTitle>
-                                            <CardDescription className="mt-2">
-                                                {info.description}
-                                            </CardDescription>
-                                        </div>
-                                        <div className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                                            {data ? getTotal(data.points) : 0}
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="p-5 pt-0">
-                                    {chartLoading ? (
-                                        <div className="flex h-[300px] items-center justify-center gap-2 text-sm text-muted-foreground">
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Загрузка...
-                                        </div>
-                                    ) : data ? (
-                                        <ChartBody chart={data} />
-                                    ) : (
-                                        <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-                                            Не удалось загрузить график
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </section>
+                    {mode === "ready" ? (
+                        <section className="grid gap-5 xl:grid-cols-2">
+                            {charts.map(
+                                ({ info, data, loading: chartLoading }) => (
+                                    <Card key={info.chart}>
+                                        <CardHeader className="p-5">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="min-w-0">
+                                                    <CardTitle className="text-lg leading-tight">
+                                                        {data?.title ??
+                                                            info.title}
+                                                    </CardTitle>
+                                                    <CardDescription className="mt-2">
+                                                        {info.description}
+                                                    </CardDescription>
+                                                </div>
+                                                <div className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                                                    {data
+                                                        ? getTotal(data.points)
+                                                        : 0}
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="p-5 pt-0">
+                                            {chartLoading ? (
+                                                <div className="flex h-[300px] items-center justify-center gap-2 text-sm text-muted-foreground">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Загрузка...
+                                                </div>
+                                            ) : data ? (
+                                                <ChartBody chart={data} />
+                                            ) : (
+                                                <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+                                                    Не удалось загрузить график
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                ),
+                            )}
+                        </section>
+                    ) : null}
                 </div>
             </main>
         </div>
