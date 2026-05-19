@@ -1,7 +1,7 @@
 import { type AxiosResponse } from "axios";
 
 import type { GetLogsQueryParams } from "@/entities/logs/types/requests";
-import type { GetLogsResponse } from "@/entities/logs/types/responses";
+import type { GetLogsResponse, Log } from "@/entities/logs/types/responses";
 import { authRequest } from "@/shared/api/http";
 
 function cleanParams(params: GetLogsQueryParams): GetLogsQueryParams {
@@ -28,6 +28,15 @@ class LogsProxy {
             console.log("[ERROR] while getting logs", e);
             return [];
         }
+    };
+
+    public getLog = async (logKey: string): Promise<Log> => {
+        const response: AxiosResponse<Log> = await authRequest<Log>({
+            url: `${this.BASE_URL}/${logKey}`,
+            method: "GET",
+        });
+
+        return response.data;
     };
 }
 

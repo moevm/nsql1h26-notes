@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { useNoteLayout } from "@/pages/note/ui/note-layout-context";
 import { NoteShareModal } from "@/pages/note/ui/note-share-modal";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { UserLink } from "@/shared/ui/user-link";
 
 type NoteEditorMode = "new" | "edit";
 
@@ -538,9 +539,10 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                             <p>
                                 Создатель:{" "}
-                                <span className="text-foreground">
-                                    {loadedNote.username || "Неизвестно"}
-                                </span>
+                                <UserLink
+                                    userKey={loadedNote.user_ref}
+                                    username={loadedNote.username}
+                                />
                             </p>
                             <p>
                                 Создана:{" "}

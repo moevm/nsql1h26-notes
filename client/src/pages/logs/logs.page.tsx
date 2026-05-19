@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { usersProxy } from "@/entities/user/api/users.proxy";
 import type { Note } from "@/entities/note/types/dto";
@@ -37,6 +37,8 @@ import type {
 
 export function LogsPage({ scope }: { scope: LogsPageScope }) {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const urlTargetUserKey = searchParams.get("target_user_key") ?? "";
     const currentUser = useAccessTokenPayload();
     const isAdmin = isAdminRole(currentUser?.role);
     const { getLogs, loading, error } = useGetLogs();
@@ -54,6 +56,24 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
         useState<LogFilters>(defaultFilters);
     const [appliedFilters, setAppliedFilters] =
         useState<LogFilters>(defaultFilters);
+
+    useEffect(() => {
+        if (scope !== "admin" || !urlTargetUserKey) {
+            return;
+        }
+
+        setLastPageOffset(null);
+        setDraftFilters((current) => ({
+            ...current,
+            target_user_key: urlTargetUserKey,
+            offset: 0,
+        }));
+        setAppliedFilters((current) => ({
+            ...current,
+            target_user_key: urlTargetUserKey,
+            offset: 0,
+        }));
+    }, [scope, urlTargetUserKey]);
 
     useEffect(() => {
         let alive = true;
@@ -434,6 +454,16 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
                     },
                     ...(scope === "admin"
                         ? [
+                              {
+                                  title: "Заметки",
+                                  onClick: () => navigate("/admin/notes"),
+                                  variant: "outline" as const,
+                              },
+                              {
+                                  title: "Пользователи",
+                                  onClick: () => navigate("/admin/users"),
+                                  variant: "outline" as const,
+                              },
                               {
                                   title: "Моя страница",
                                   onClick: () => navigate("/logs/my"),

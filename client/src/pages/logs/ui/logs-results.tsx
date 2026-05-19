@@ -1,11 +1,13 @@
 import {type KeyboardEvent, type ReactNode, useEffect, useState} from "react";
 import {ClipboardList, Loader2} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import type {Log} from "@/entities/logs/types/responses";
 import {typeLabels} from "@/pages/logs/ui/constants";
 import {formatDate, formatKey, getActionLabel, getLogTitle} from "@/pages/logs/ui/helpers";
+import { UserLink } from "@/shared/ui/user-link";
 
 interface LogsResultsProps {
     logs: Log[];
@@ -121,9 +123,11 @@ function LogEntityCell({ log }: { log: Log }) {
 function LogActorsCell({ log }: { log: Log }) {
     if (log.type === "registration") {
         return (
-            <p className="font-mono text-xs text-muted-foreground" title={log.user_key}>
-                {formatKey(log.username)}
-            </p>
+            <UserLink
+                userKey={log.user_key}
+                username={log.username}
+                className="font-mono text-xs"
+            />
         );
     }
 
@@ -131,19 +135,31 @@ function LogActorsCell({ log }: { log: Log }) {
         return (
             <div className="space-y-1 text-xs text-muted-foreground">
                 <p title={log.granted_by_key}>
-                    От: <span className="font-mono">{formatKey(log.granted_by_username)}</span>
+                    От:{" "}
+                    <UserLink
+                        userKey={log.granted_by_key}
+                        username={log.granted_by_username}
+                        className="font-mono text-xs"
+                    />
                 </p>
                 <p title={log.granted_to_key}>
-                    Кому: <span className="font-mono">{formatKey(log.granted_to_username)}</span>
+                    Кому:{" "}
+                    <UserLink
+                        userKey={log.granted_to_key}
+                        username={log.granted_to_username}
+                        className="font-mono text-xs"
+                    />
                 </p>
             </div>
         );
     }
 
     return (
-        <p className="font-mono text-xs text-muted-foreground" title={log.user_key}>
-            {formatKey(log.username)}
-        </p>
+        <UserLink
+            userKey={log.user_key}
+            username={log.username}
+            className="font-mono text-xs"
+        />
     );
 }
 
@@ -231,6 +247,7 @@ export function LogsResults({
     onPreviousPage,
     onNextPage,
 }: LogsResultsProps) {
+    const navigate = useNavigate();
     const [limitDraft, setLimitDraft] = useState(String(limit));
 
     useEffect(() => {
@@ -326,7 +343,19 @@ export function LogsResults({
                             </thead>
                             <tbody>
                                 {logs.map((log) => (
-                                    <tr key={log.log_key} className="align-top transition-colors hover:bg-black/[0.02]">
+                                    <tr
+                                        key={log.log_key}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => navigate(`/logs/${log.log_key}`)}
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter" || event.key === " ") {
+                                                event.preventDefault();
+                                                navigate(`/logs/${log.log_key}`);
+                                            }
+                                        }}
+                                        className="cursor-pointer align-top transition-colors hover:bg-black/[0.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                                    >
                                         <td className="border-b border-black/10 px-4 py-3 text-muted-foreground">
                                             <time dateTime={log.created_at}>{formatDate(log.created_at)}</time>
                                         </td>

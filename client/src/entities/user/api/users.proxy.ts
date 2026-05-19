@@ -1,6 +1,9 @@
-import type { GetUsersResponse } from "@/entities/user/types/responses";
+import type {
+    GetUserResponse,
+    GetUsersResponse,
+} from "@/entities/user/types/responses";
 import type { AxiosResponse } from "axios";
-import { http } from "@/shared/api/http";
+import { authRequest, http } from "@/shared/api/http";
 
 class UsersProxy {
     private readonly BASE_URL = "/users";
@@ -26,6 +29,16 @@ class UsersProxy {
         } catch (e) {
             throw e;
         }
+    };
+
+    public getUser = async (userKey: string): Promise<GetUserResponse> => {
+        const response: AxiosResponse<GetUserResponse> =
+            await authRequest<GetUserResponse>({
+                url: `${this.BASE_URL}/${userKey}`,
+                method: "GET",
+            });
+
+        return response.data;
     };
 }
 

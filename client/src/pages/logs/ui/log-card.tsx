@@ -4,6 +4,7 @@ import type { Log, NoteLog, NoteState, PermissionLog, RegistrationLog } from "@/
 import { cn } from "@/lib/utils";
 import { typeLabels } from "@/pages/logs/ui/constants";
 import { formatDate, formatKey, getActionLabel, getLogTitle } from "@/pages/logs/ui/helpers";
+import { UserLink } from "@/shared/ui/user-link";
 
 const typeMeta = {
     note: {
@@ -51,7 +52,15 @@ function NoteSnapshot({ title, state }: { title: string; state: NoteState }) {
     );
 }
 
-function KeyValue({ label, value, title }: { label: string; value: string; title?: string }) {
+function KeyValue({
+    label,
+    value,
+    title,
+}: {
+    label: string;
+    value: string;
+    title?: string;
+}) {
     return (
         <div className="min-w-0 border-t pt-3">
             <p className="text-xs font-medium text-muted-foreground">{label}</p>
@@ -65,7 +74,14 @@ function KeyValue({ label, value, title }: { label: string; value: string; title
 function RegistrationDetails({ log }: { log: RegistrationLog }) {
     return (
         <div className="grid gap-3 sm:grid-cols-2">
-            <KeyValue label="Пользователь" value={formatKey(log.user_key)} title={log.user_key} />
+            <div className="min-w-0 border-t pt-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                    Пользователь
+                </p>
+                <p className="mt-1 truncate font-mono text-sm">
+                    <UserLink userKey={log.user_key} username={log.username} />
+                </p>
+            </div>
             <KeyValue label="Действие" value={getActionLabel(log)} />
         </div>
     );
@@ -75,8 +91,28 @@ function PermissionDetails({ log }: { log: PermissionLog }) {
     return (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <KeyValue label="Заметка" value={formatKey(log.note_key)} title={log.note_key} />
-            <KeyValue label="Кто выдал" value={formatKey(log.granted_by_key)} title={log.granted_by_key} />
-            <KeyValue label="Кому выдали" value={formatKey(log.granted_to_key)} title={log.granted_to_key} />
+            <div className="min-w-0 border-t pt-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                    Кто выдал
+                </p>
+                <p className="mt-1 truncate font-mono text-sm">
+                    <UserLink
+                        userKey={log.granted_by_key}
+                        username={log.granted_by_username}
+                    />
+                </p>
+            </div>
+            <div className="min-w-0 border-t pt-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                    Кому выдали
+                </p>
+                <p className="mt-1 truncate font-mono text-sm">
+                    <UserLink
+                        userKey={log.granted_to_key}
+                        username={log.granted_to_username}
+                    />
+                </p>
+            </div>
             <KeyValue
                 label="Права"
                 value={`${log.before_permission_type || "нет"} -> ${log.after_permission_type || "нет"}`}
@@ -89,7 +125,17 @@ function NoteDetails({ log }: { log: NoteLog }) {
     return (
         <>
             <div className="grid gap-3 sm:grid-cols-2">
-                <KeyValue label="Пользователь" value={formatKey(log.user_key)} title={log.user_key} />
+                <div className="min-w-0 border-t pt-3">
+                    <p className="text-xs font-medium text-muted-foreground">
+                        Пользователь
+                    </p>
+                    <p className="mt-1 truncate font-mono text-sm">
+                        <UserLink
+                            userKey={log.user_key}
+                            username={log.username}
+                        />
+                    </p>
+                </div>
                 <KeyValue label="Заметка" value={formatKey(log.note_key)} title={log.note_key} />
             </div>
 
