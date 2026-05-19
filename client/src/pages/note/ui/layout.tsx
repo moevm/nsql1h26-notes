@@ -29,11 +29,15 @@ import {
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
 import { Header } from "@/shared/layout/Header";
-import { clearRefreshToken, clearStoredAccessToken } from "@/shared/lib/token-storage";
+import {
+    clearRefreshToken,
+    clearStoredAccessToken,
+} from "@/shared/lib/token-storage";
 
 const normalizeFilters = (filters: NoteFilters): NoteFilters => ({
     ...filters,
     parent_key: filters.parent_key.trim(),
+    linked_note_key: filters.linked_note_key.trim(),
     tag: filters.tag.trim(),
     search: filters.search.trim(),
     created_from: filters.created_from.trim(),
@@ -85,6 +89,7 @@ export const NotePageLayout = () => {
         () =>
             buildGetNotesRequest({
                 parent_key: filters.parent_key,
+                linked_note_key: filters.linked_note_key,
                 tag: filters.tag,
                 search: debouncedSearch,
                 created_from: filters.created_from,
@@ -99,6 +104,7 @@ export const NotePageLayout = () => {
             filters.created_from,
             filters.created_to,
             filters.limit,
+            filters.linked_note_key,
             filters.offset,
             filters.parent_key,
             filters.tag,

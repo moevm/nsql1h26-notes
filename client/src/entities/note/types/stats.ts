@@ -54,6 +54,14 @@ export interface NoteStatsResponse {
 
 export interface GetNoteStatsChartRequest {
     chart: NoteStatsChart;
+    parent_key?: string | null;
+    linked_note_key?: string | null;
+    tag?: string | null;
+    search?: string | null;
+    created_from?: string | null;
+    created_to?: string | null;
+    updated_from?: string | null;
+    updated_to?: string | null;
     scope?: NoteStatsScope;
     limit?: number;
 }
@@ -62,6 +70,14 @@ export interface GetNoteStatsRequest {
     x_axis: NoteStatsAxis;
     series_axis?: NoteStatsSeriesAxis;
     metric: NoteStatsMetric;
+    parent_key?: string | null;
+    linked_note_key?: string | null;
+    tag?: string | null;
+    search?: string | null;
+    created_from?: string | null;
+    created_to?: string | null;
+    updated_from?: string | null;
+    updated_to?: string | null;
     scope?: NoteStatsScope;
     limit?: number;
 }

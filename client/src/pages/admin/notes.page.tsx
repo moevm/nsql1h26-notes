@@ -1,5 +1,5 @@
-import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
-import { FileText, Loader2 } from "lucide-react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { ChevronDown, FileText, Loader2, RotateCcw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,38 @@ import { getErrorMessage } from "@/shared/api/error";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
 import { Header } from "@/shared/layout/Header";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
-import { clearRefreshToken, clearStoredAccessToken } from "@/shared/lib/token-storage";
+import {
+    clearRefreshToken,
+    clearStoredAccessToken,
+} from "@/shared/lib/token-storage";
 import { UserLink } from "@/shared/ui/user-link";
 import { formatDate, formatKey } from "@/pages/logs/ui/helpers";
+import { LogNotePickerModal } from "@/pages/logs/ui/log-note-picker-modal";
+import {
+    buildGetNotesRequest,
+    countActiveNoteFilters,
+    DEFAULT_NOTE_FILTERS,
+    type NoteFilters,
+} from "@/pages/note/ui/note-filters";
+
+const ADMIN_NOTE_FILTERS: NoteFilters = {
+    ...DEFAULT_NOTE_FILTERS,
+    limit: 50,
+};
+
+const normalizeFilters = (filters: NoteFilters): NoteFilters => ({
+    ...filters,
+    parent_key: filters.parent_key.trim(),
+    linked_note_key: filters.linked_note_key.trim(),
+    tag: filters.tag.trim(),
+    search: filters.search.trim(),
+    created_from: filters.created_from.trim(),
+    created_to: filters.created_to.trim(),
+    updated_from: filters.updated_from.trim(),
+    updated_to: filters.updated_to.trim(),
+    limit: Math.min(256, Math.max(1, filters.limit)),
+    offset: Math.max(0, filters.offset),
+});
 
 export function AdminNotesPage() {
     const navigate = useNavigate();
@@ -21,15 +50,17 @@ export function AdminNotesPage() {
     const [notes, setNotes] = useState<Note[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [search, setSearch] = useState("");
-    const [appliedSearch, setAppliedSearch] = useState("");
-    const [limit, setLimit] = useState(50);
-    const [offset, setOffset] = useState(0);
-    const [limitDraft, setLimitDraft] = useState("50");
-
-    useEffect(() => {
-        setLimitDraft(String(limit));
-    }, [limit]);
+    const [filters, setFilters] = useState<NoteFilters>(ADMIN_NOTE_FILTERS);
+    const [filterDraft, setFilterDraft] =
+        useState<NoteFilters>(ADMIN_NOTE_FILTERS);
+    const [filterNotes, setFilterNotes] = useState<Note[]>([]);
+    const [filterNotesLoading, setFilterNotesLoading] = useState(false);
+    const [filterNotesError, setFilterNotesError] = useState<string | null>(
+        null,
+    );
+    const [notePickerTarget, setNotePickerTarget] = useState<
+        "parent_key" | "linked_note_key" | null
+    >(null);
 
     useEffect(() => {
         let alive = true;
@@ -40,9 +71,7 @@ export function AdminNotesPage() {
 
             try {
                 const response = await noteProxy.getNotes({
-                    limit,
-                    offset,
-                    search: appliedSearch.trim() || undefined,
+                    ...buildGetNotesRequest(filters),
                 });
 
                 if (alive) {
@@ -65,13 +94,75 @@ export function AdminNotesPage() {
         return () => {
             alive = false;
         };
-    }, [appliedSearch, limit, offset]);
+    }, [filters]);
+
+    useEffect(() => {
+        if (!notePickerTarget) {
+            return;
+        }
+
+        let alive = true;
+
+        const loadFilterNotes = async () => {
+            setFilterNotesLoading(true);
+            setFilterNotesError(null);
+
+            try {
+                const response = await noteProxy.getNotes({
+                    limit: 256,
+                    offset: 0,
+                });
+
+                if (alive) {
+                    setFilterNotes(response ?? []);
+                }
+            } catch (err) {
+                if (alive) {
+                    setFilterNotesError(getErrorMessage(err));
+                    setFilterNotes([]);
+                }
+            } finally {
+                if (alive) {
+                    setFilterNotesLoading(false);
+                }
+            }
+        };
+
+        void loadFilterNotes();
+
+        return () => {
+            alive = false;
+        };
+    }, [notePickerTarget]);
 
     const currentPage = useMemo(
-        () => Math.floor(offset / limit) + 1,
-        [limit, offset],
+        () => Math.floor(filters.offset / filters.limit) + 1,
+        [filters.limit, filters.offset],
     );
-    const hasNextPage = notes.length === limit;
+    const hasNextPage = notes.length === filters.limit;
+    const activeFiltersCount = useMemo(
+        () => countActiveNoteFilters(filters, ADMIN_NOTE_FILTERS),
+        [filters],
+    );
+    const noteMap = useMemo(
+        () => new Map(filterNotes.map((note) => [note.note_key, note])),
+        [filterNotes],
+    );
+    const selectedParent =
+        filterDraft.parent_key && filterDraft.parent_key !== "root"
+            ? noteMap.get(filterDraft.parent_key)
+            : null;
+    const selectedLinkedNote = filterDraft.linked_note_key
+        ? noteMap.get(filterDraft.linked_note_key)
+        : null;
+    const parentLabel = !filterDraft.parent_key
+        ? "Не выбран"
+        : filterDraft.parent_key === "root"
+          ? "Корневые заметки"
+          : selectedParent?.title || formatKey(filterDraft.parent_key);
+    const linkedNoteLabel = !filterDraft.linked_note_key
+        ? "Не выбрана"
+        : selectedLinkedNote?.title || formatKey(filterDraft.linked_note_key);
 
     const logout = () => {
         clearStoredAccessToken();
@@ -79,28 +170,29 @@ export function AdminNotesPage() {
         navigate("/auth/signin", { replace: true });
     };
 
-    const applySearch = () => {
-        setAppliedSearch(search);
-        setOffset(0);
+    const updateFilterDraft = <Key extends keyof NoteFilters>(
+        field: Key,
+        value: NoteFilters[Key],
+    ) => {
+        setFilterDraft((current) => ({
+            ...current,
+            [field]: value,
+        }));
     };
 
-    const commitLimit = () => {
-        const nextLimit = Number.parseInt(limitDraft, 10);
-
-        if (!Number.isFinite(nextLimit) || nextLimit < 1) {
-            setLimitDraft(String(limit));
-            return;
-        }
-
-        setLimit(nextLimit);
-        setOffset(0);
+    const applyFilters = (event?: FormEvent<HTMLFormElement>) => {
+        event?.preventDefault();
+        const normalized = normalizeFilters({
+            ...filterDraft,
+            offset: 0,
+        });
+        setFilterDraft(normalized);
+        setFilters(normalized);
     };
 
-    const handleLimitKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            commitLimit();
-        }
+    const resetFilters = () => {
+        setFilterDraft(ADMIN_NOTE_FILTERS);
+        setFilters(ADMIN_NOTE_FILTERS);
     };
 
     return (
@@ -139,30 +231,181 @@ export function AdminNotesPage() {
                         <h1 className="text-xl font-semibold">Заметки</h1>
                         <p className="mt-1 text-sm text-muted-foreground">
                             Страница {currentPage}, найдено в выдаче:{" "}
-                            {notes.length}
+                            {notes.length}, активных фильтров:{" "}
+                            {activeFiltersCount}
                         </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                </div>
+
+                <form
+                    className="mb-5 grid gap-3 rounded-md border border-black/10 bg-white p-4 md:grid-cols-4"
+                    onSubmit={applyFilters}
+                >
+                    <label className="grid gap-1.5 text-sm">
+                        <span className="text-muted-foreground">search</span>
                         <Input
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            onKeyDown={(event) => {
-                                if (event.key === "Enter") {
-                                    applySearch();
-                                }
-                            }}
-                            placeholder="Поиск по заметкам"
-                            className="w-64"
+                            value={filterDraft.search}
+                            onChange={(event) =>
+                                updateFilterDraft("search", event.target.value)
+                            }
+                            placeholder="Название или текст"
                         />
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm">
+                        <span className="text-muted-foreground">tag</span>
+                        <Input
+                            value={filterDraft.tag}
+                            onChange={(event) =>
+                                updateFilterDraft("tag", event.target.value)
+                            }
+                            placeholder="Тег"
+                        />
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm md:col-span-2">
+                        <span className="text-muted-foreground">
+                            parent_key
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="min-w-0 flex-1 justify-between px-3 font-normal"
+                                onClick={() =>
+                                    setNotePickerTarget("parent_key")
+                                }
+                            >
+                                <span className="truncate">{parentLabel}</span>
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={
+                                    filterDraft.parent_key === "root"
+                                        ? "default"
+                                        : "outline"
+                                }
+                                onClick={() =>
+                                    updateFilterDraft("parent_key", "root")
+                                }
+                            >
+                                Корневые
+                            </Button>
+                        </div>
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm md:col-span-2">
+                        <span className="text-muted-foreground">
+                            linked_note_key
+                        </span>
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={applySearch}
+                            className="justify-between px-3 font-normal"
+                            onClick={() =>
+                                setNotePickerTarget("linked_note_key")
+                            }
                         >
-                            Найти
+                            <span className="truncate">{linkedNoteLabel}</span>
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm">
+                        <span className="text-muted-foreground">
+                            created_from
+                        </span>
+                        <Input
+                            type="datetime-local"
+                            value={filterDraft.created_from}
+                            onChange={(event) =>
+                                updateFilterDraft(
+                                    "created_from",
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm">
+                        <span className="text-muted-foreground">
+                            created_to
+                        </span>
+                        <Input
+                            type="datetime-local"
+                            value={filterDraft.created_to}
+                            onChange={(event) =>
+                                updateFilterDraft(
+                                    "created_to",
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm">
+                        <span className="text-muted-foreground">
+                            updated_from
+                        </span>
+                        <Input
+                            type="datetime-local"
+                            value={filterDraft.updated_from}
+                            onChange={(event) =>
+                                updateFilterDraft(
+                                    "updated_from",
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm">
+                        <span className="text-muted-foreground">
+                            updated_to
+                        </span>
+                        <Input
+                            type="datetime-local"
+                            value={filterDraft.updated_to}
+                            onChange={(event) =>
+                                updateFilterDraft(
+                                    "updated_to",
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm">
+                        <span className="text-muted-foreground">limit</span>
+                        <Input
+                            type="number"
+                            min={1}
+                            max={256}
+                            step={1}
+                            value={filterDraft.limit}
+                            onChange={(event) =>
+                                updateFilterDraft(
+                                    "limit",
+                                    Number.parseInt(event.target.value, 10) ||
+                                        1,
+                                )
+                            }
+                        />
+                    </label>
+
+                    <div className="flex flex-wrap items-end gap-2 md:col-span-3">
+                        <Button type="submit">Применить фильтр</Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={resetFilters}
+                        >
+                            <RotateCcw className="h-4 w-4" />
+                            Сбросить
                         </Button>
                     </div>
-                </div>
+                </form>
 
                 {!isAdmin && currentUser ? (
                     <div className="rounded-md border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
@@ -231,14 +474,16 @@ export function AdminNotesPage() {
                                             <td className="border-b border-black/10 px-4 py-3">
                                                 {note.tags.length ? (
                                                     <div className="flex flex-wrap gap-1">
-                                                        {note.tags.map((tag) => (
-                                                            <span
-                                                                key={tag}
-                                                                className="rounded-sm border border-black/10 px-1.5 py-0.5 text-xs"
-                                                            >
-                                                                {tag}
-                                                            </span>
-                                                        ))}
+                                                        {note.tags.map(
+                                                            (tag) => (
+                                                                <span
+                                                                    key={tag}
+                                                                    className="rounded-sm border border-black/10 px-1.5 py-0.5 text-xs"
+                                                                >
+                                                                    {tag}
+                                                                </span>
+                                                            ),
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <span className="text-xs text-muted-foreground">
@@ -272,8 +517,16 @@ export function AdminNotesPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={loading || offset === 0}
-                        onClick={() => setOffset((current) => Math.max(0, current - limit))}
+                        disabled={loading || filters.offset === 0}
+                        onClick={() =>
+                            setFilters((current) => ({
+                                ...current,
+                                offset: Math.max(
+                                    0,
+                                    current.offset - current.limit,
+                                ),
+                            }))
+                        }
                     >
                         Назад
                     </Button>
@@ -282,25 +535,43 @@ export function AdminNotesPage() {
                         variant="outline"
                         size="sm"
                         disabled={loading || !hasNextPage}
-                        onClick={() => setOffset((current) => current + limit)}
+                        onClick={() =>
+                            setFilters((current) => ({
+                                ...current,
+                                offset: current.offset + current.limit,
+                            }))
+                        }
                     >
                         Дальше
                     </Button>
                     <span className="text-sm text-muted-foreground">
-                        Записей
+                        Записей на странице: {filters.limit}
                     </span>
-                    <Input
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={limitDraft}
-                        onChange={(event) => setLimitDraft(event.target.value)}
-                        onBlur={commitLimit}
-                        onKeyDown={handleLimitKeyDown}
-                        className="w-24 text-center"
-                    />
                 </div>
             </main>
+
+            <LogNotePickerModal
+                open={notePickerTarget !== null}
+                notes={filterNotes}
+                loading={filterNotesLoading}
+                error={filterNotesError}
+                selectedNoteKey={
+                    notePickerTarget ? filterDraft[notePickerTarget] : ""
+                }
+                onSelect={(noteKey) => {
+                    if (notePickerTarget) {
+                        updateFilterDraft(notePickerTarget, noteKey);
+                    }
+                    setNotePickerTarget(null);
+                }}
+                onClear={() => {
+                    if (notePickerTarget) {
+                        updateFilterDraft(notePickerTarget, "");
+                    }
+                    setNotePickerTarget(null);
+                }}
+                onClose={() => setNotePickerTarget(null)}
+            />
         </div>
     );
 }

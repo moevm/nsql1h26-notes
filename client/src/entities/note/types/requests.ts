@@ -2,6 +2,7 @@ import { ISOString } from "@/shared/types/date";
 
 export type GetNotesRequest = {
     parent_key?: string | null;
+    linked_note_key?: string | null;
     tag?: string | null;
     search?: string | null;
     created_from?: ISOString | null;

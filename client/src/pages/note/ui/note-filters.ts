@@ -2,6 +2,7 @@ import type { GetNotesRequest } from "@/entities/note/types/requests";
 
 export type NoteFilters = {
     parent_key: string;
+    linked_note_key: string;
     tag: string;
     search: string;
     created_from: string;
@@ -14,6 +15,7 @@ export type NoteFilters = {
 
 export const DEFAULT_NOTE_FILTERS: NoteFilters = {
     parent_key: "",
+    linked_note_key: "",
     tag: "",
     search: "",
     created_from: "",
@@ -48,6 +50,7 @@ const toNullableISOString = (value: string) => {
 export function buildGetNotesRequest(filters: NoteFilters): GetNotesRequest {
     return {
         parent_key: toNullableString(filters.parent_key),
+        linked_note_key: toNullableString(filters.linked_note_key),
         tag: toNullableString(filters.tag),
         search: toNullableString(filters.search),
         created_from: toNullableISOString(filters.created_from),
@@ -59,9 +62,13 @@ export function buildGetNotesRequest(filters: NoteFilters): GetNotesRequest {
     };
 }
 
-export function countActiveNoteFilters(filters: NoteFilters) {
+export function countActiveNoteFilters(
+    filters: NoteFilters,
+    defaults: NoteFilters = DEFAULT_NOTE_FILTERS,
+) {
     const textFilters = [
         filters.parent_key,
+        filters.linked_note_key,
         filters.tag,
         filters.search,
         filters.created_from,
@@ -71,8 +78,7 @@ export function countActiveNoteFilters(filters: NoteFilters) {
     ].filter((value) => value.trim()).length;
 
     const pagingFilters =
-        filters.limit !== DEFAULT_NOTE_FILTERS.limit ||
-        filters.offset !== DEFAULT_NOTE_FILTERS.offset
+        filters.limit !== defaults.limit || filters.offset !== defaults.offset
             ? 1
             : 0;
 

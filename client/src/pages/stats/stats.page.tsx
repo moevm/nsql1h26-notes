@@ -1,5 +1,5 @@
-import {useEffect, useMemo, useState} from "react";
-import {useNavigate} from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Area,
     AreaChart,
@@ -15,9 +15,9 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
-import {BarChart3, Loader2} from "lucide-react";
+import { BarChart3, ChevronDown, Loader2, RotateCcw } from "lucide-react";
 
-import {noteProxy} from "@/entities/note/api/proxy";
+import { noteProxy } from "@/entities/note/api/proxy";
 import type {
     NoteStatsAxis,
     NoteStatsChart,
@@ -29,13 +29,27 @@ import type {
     NoteStatsScope,
     NoteStatsSeriesAxis,
 } from "@/entities/note/types/stats";
-import {Button} from "@/components/ui/button";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card";
-import {Header} from "@/shared/layout/Header";
-import {useAccessTokenPayload} from "@/shared/hooks/use-access-token-payload";
-import {isAdminRole} from "@/shared/lib/access-token-payload";
-import {getAccessToken, setAccessToken} from "@/shared/lib/auth-state";
-import {clearRefreshToken, clearStoredAccessToken, getRefreshToken,} from "@/shared/lib/token-storage";
+import { Button } from "@/components/ui/button";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import type { Note } from "@/entities/note/types/dto";
+import { LogNotePickerModal } from "@/pages/logs/ui/log-note-picker-modal";
+import { formatKey } from "@/pages/logs/ui/helpers";
+import { Header } from "@/shared/layout/Header";
+import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { isAdminRole } from "@/shared/lib/access-token-payload";
+import { getAccessToken, setAccessToken } from "@/shared/lib/auth-state";
+import {
+    clearRefreshToken,
+    clearStoredAccessToken,
+    getRefreshToken,
+} from "@/shared/lib/token-storage";
 
 const chartOrder: NoteStatsChart[] = [
     "created_by_day",
@@ -63,6 +77,18 @@ type ChartState = {
     loading: boolean;
 };
 
+type StatsFilters = {
+    parent_key: string;
+    linked_note_key: string;
+    tag: string;
+    search: string;
+    created_from: string;
+    created_to: string;
+    updated_from: string;
+    updated_to: string;
+    limit: number;
+};
+
 type FlatPoint = {
     name: string;
     value: number;
@@ -75,6 +101,18 @@ type PivotRow = {
 
 const TOP_SERIES_COUNT = 5;
 const TOP_BAR_COUNT = 8;
+
+const DEFAULT_STATS_FILTERS: StatsFilters = {
+    parent_key: "",
+    linked_note_key: "",
+    tag: "",
+    search: "",
+    created_from: "",
+    created_to: "",
+    updated_from: "",
+    updated_to: "",
+    limit: 100,
+};
 
 const axisLabels: Record<NoteStatsAxis, string> = {
     created_date: "Дата создания",
@@ -120,6 +158,68 @@ const allowedCustomStats: Record<
 
 const selectClassName =
     "h-10 rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none transition-colors focus:border-primary";
+
+const toNullableString = (value: string) => {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+};
+
+const toNullableISOString = (value: string) => {
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+        return null;
+    }
+
+    const date = new Date(trimmed);
+
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    return date.toISOString();
+};
+
+function normalizeStatsFilters(filters: StatsFilters): StatsFilters {
+    return {
+        parent_key: filters.parent_key.trim(),
+        linked_note_key: filters.linked_note_key.trim(),
+        tag: filters.tag.trim(),
+        search: filters.search.trim(),
+        created_from: filters.created_from.trim(),
+        created_to: filters.created_to.trim(),
+        updated_from: filters.updated_from.trim(),
+        updated_to: filters.updated_to.trim(),
+        limit: Math.min(500, Math.max(1, filters.limit)),
+    };
+}
+
+function buildStatsFilterParams(filters: StatsFilters) {
+    return {
+        parent_key: toNullableString(filters.parent_key),
+        linked_note_key: toNullableString(filters.linked_note_key),
+        tag: toNullableString(filters.tag),
+        search: toNullableString(filters.search),
+        created_from: toNullableISOString(filters.created_from),
+        created_to: toNullableISOString(filters.created_to),
+        updated_from: toNullableISOString(filters.updated_from),
+        updated_to: toNullableISOString(filters.updated_to),
+        limit: Math.min(500, Math.max(1, filters.limit)),
+    };
+}
+
+function countActiveStatsFilters(filters: StatsFilters) {
+    return [
+        filters.parent_key,
+        filters.linked_note_key,
+        filters.tag,
+        filters.search,
+        filters.created_from,
+        filters.created_to,
+        filters.updated_from,
+        filters.updated_to,
+    ].filter((value) => value.trim()).length;
+}
 
 function formatLabel(value: string | null) {
     if (!value) {
@@ -177,7 +277,8 @@ function getPivotRows(points: NoteStatsPoint[]) {
             : "Остальные";
 
         const row = rows.get(name) ?? { name };
-        row[seriesName] = ((row[seriesName] as number | undefined) ?? 0) + point.value;
+        row[seriesName] =
+            ((row[seriesName] as number | undefined) ?? 0) + point.value;
         rows.set(name, row);
     });
 
@@ -209,8 +310,14 @@ function ChartBody({
 }: {
     chart: NoteStatsResponse & { chart?: NoteStatsChart };
 }) {
-    const flatPoints = useMemo(() => getFlatPoints(chart.points), [chart.points]);
-    const topFlatPoints = useMemo(() => getTopFlatPoints(flatPoints), [flatPoints]);
+    const flatPoints = useMemo(
+        () => getFlatPoints(chart.points),
+        [chart.points],
+    );
+    const topFlatPoints = useMemo(
+        () => getTopFlatPoints(flatPoints),
+        [flatPoints],
+    );
     const pivot = useMemo(() => getPivotRows(chart.points), [chart.points]);
 
     if (!chart.points.length) {
@@ -239,7 +346,11 @@ function ChartBody({
                         />
                         <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                         <Tooltip />
-                        <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="#2563eb" />
+                        <Bar
+                            dataKey="value"
+                            radius={[4, 4, 0, 0]}
+                            fill="#2563eb"
+                        />
                     </BarChart>
                 </ResponsiveContainer>
                 <p className="text-xs text-muted-foreground">
@@ -340,12 +451,58 @@ export function StatsPage() {
     );
     const [customLoading, setCustomLoading] = useState(false);
     const [customError, setCustomError] = useState<string | null>(null);
+    const [statsFilters, setStatsFilters] = useState<StatsFilters>(
+        DEFAULT_STATS_FILTERS,
+    );
+    const [statsFilterDraft, setStatsFilterDraft] = useState<StatsFilters>(
+        DEFAULT_STATS_FILTERS,
+    );
+    const [filterNotes, setFilterNotes] = useState<Note[]>([]);
+    const [filterNotesLoading, setFilterNotesLoading] = useState(false);
+    const [filterNotesError, setFilterNotesError] = useState<string | null>(
+        null,
+    );
+    const [notePickerTarget, setNotePickerTarget] = useState<
+        "parent_key" | "linked_note_key" | null
+    >(null);
 
     useEffect(() => {
         if (!getAccessToken() && !getRefreshToken()) {
             navigate("/auth/signin", { replace: true });
         }
     }, [navigate]);
+
+    const statsFilterParams = useMemo(
+        () => buildStatsFilterParams(statsFilters),
+        [statsFilters],
+    );
+
+    const activeStatsFiltersCount = useMemo(
+        () => countActiveStatsFilters(statsFilters),
+        [statsFilters],
+    );
+
+    const noteMap = useMemo(
+        () => new Map(filterNotes.map((note) => [note.note_key, note])),
+        [filterNotes],
+    );
+
+    const selectedParent =
+        statsFilterDraft.parent_key && statsFilterDraft.parent_key !== "root"
+            ? noteMap.get(statsFilterDraft.parent_key)
+            : null;
+    const selectedLinkedNote = statsFilterDraft.linked_note_key
+        ? noteMap.get(statsFilterDraft.linked_note_key)
+        : null;
+    const parentLabel = !statsFilterDraft.parent_key
+        ? "Не выбран"
+        : statsFilterDraft.parent_key === "root"
+          ? "Корневые заметки"
+          : selectedParent?.title || formatKey(statsFilterDraft.parent_key);
+    const linkedNoteLabel = !statsFilterDraft.linked_note_key
+        ? "Не выбрана"
+        : selectedLinkedNote?.title ||
+          formatKey(statsFilterDraft.linked_note_key);
 
     useEffect(() => {
         let alive = true;
@@ -375,8 +532,8 @@ export function StatsPage() {
                         info,
                         data: await noteProxy.getStatsChart({
                             chart: info.chart,
+                            ...statsFilterParams,
                             scope: isAdmin && info.admin_only ? "all" : "auto",
-                            limit: info.chart === "tags_popularity" ? 12 : 100,
                         }),
                         loading: false,
                     })),
@@ -407,11 +564,10 @@ export function StatsPage() {
         return () => {
             alive = false;
         };
-    }, [isAdmin]);
+    }, [isAdmin, statsFilterParams]);
 
     const availableCustomXAxes = useMemo(
-        () =>
-            Object.keys(allowedCustomStats[customMetric]) as NoteStatsAxis[],
+        () => Object.keys(allowedCustomStats[customMetric]) as NoteStatsAxis[],
         [customMetric],
     );
 
@@ -457,8 +613,8 @@ export function StatsPage() {
                 metric: customMetric,
                 x_axis: customXAxis,
                 series_axis: customSeriesAxis,
+                ...statsFilterParams,
                 scope: isAdmin ? customScope : "auto",
-                limit: 120,
             });
 
             if (!alive) {
@@ -484,7 +640,51 @@ export function StatsPage() {
         customXAxis,
         isAdmin,
         mode,
+        statsFilterParams,
     ]);
+
+    useEffect(() => {
+        if (!notePickerTarget) {
+            return;
+        }
+
+        let alive = true;
+
+        const loadFilterNotes = async () => {
+            setFilterNotesLoading(true);
+            setFilterNotesError(null);
+
+            try {
+                const result = await noteProxy.getNotes({
+                    limit: 256,
+                    offset: 0,
+                });
+
+                if (alive) {
+                    setFilterNotes(result ?? []);
+                }
+            } catch (err) {
+                if (alive) {
+                    setFilterNotesError(
+                        err instanceof Error
+                            ? err.message
+                            : "Не удалось загрузить заметки",
+                    );
+                    setFilterNotes([]);
+                }
+            } finally {
+                if (alive) {
+                    setFilterNotesLoading(false);
+                }
+            }
+        };
+
+        void loadFilterNotes();
+
+        return () => {
+            alive = false;
+        };
+    }, [notePickerTarget]);
 
     const totals = useMemo(() => {
         const notesTotal =
@@ -510,6 +710,27 @@ export function StatsPage() {
         clearRefreshToken();
         setAccessToken(null);
         navigate("/auth/signin", { replace: true });
+    };
+
+    const updateStatsFilterDraft = <Key extends keyof StatsFilters>(
+        field: Key,
+        value: StatsFilters[Key],
+    ) => {
+        setStatsFilterDraft((current) => ({
+            ...current,
+            [field]: value,
+        }));
+    };
+
+    const applyStatsFilters = () => {
+        const normalized = normalizeStatsFilters(statsFilterDraft);
+        setStatsFilterDraft(normalized);
+        setStatsFilters(normalized);
+    };
+
+    const resetStatsFilters = () => {
+        setStatsFilterDraft(DEFAULT_STATS_FILTERS);
+        setStatsFilters(DEFAULT_STATS_FILTERS);
     };
 
     return (
@@ -551,7 +772,9 @@ export function StatsPage() {
                     <section className="grid gap-3 sm:grid-cols-3">
                         <Card>
                             <CardHeader className="p-5 pb-2">
-                                <CardDescription>Создано заметок</CardDescription>
+                                <CardDescription>
+                                    Создано заметок
+                                </CardDescription>
                                 <CardTitle className="text-3xl">
                                     {totals.notesTotal}
                                 </CardTitle>
@@ -559,7 +782,9 @@ export function StatsPage() {
                         </Card>
                         <Card>
                             <CardHeader className="p-5 pb-2">
-                                <CardDescription>Активных тегов</CardDescription>
+                                <CardDescription>
+                                    Активных тегов
+                                </CardDescription>
                                 <CardTitle className="text-3xl">
                                     {totals.tagsTotal}
                                 </CardTitle>
@@ -567,7 +792,9 @@ export function StatsPage() {
                         </Card>
                         <Card>
                             <CardHeader className="p-5 pb-2">
-                                <CardDescription>Доступно графиков</CardDescription>
+                                <CardDescription>
+                                    Доступно графиков
+                                </CardDescription>
                                 <CardTitle className="text-3xl">
                                     {totals.chartsTotal}
                                 </CardTitle>
@@ -582,6 +809,228 @@ export function StatsPage() {
                             </CardContent>
                         </Card>
                     ) : null}
+
+                    <Card>
+                        <CardHeader className="p-5">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <CardTitle className="text-lg">
+                                        Фильтры данных
+                                    </CardTitle>
+                                    <CardDescription className="mt-1">
+                                        Многокритериальный фильтр применяется ко
+                                        всем готовым и пользовательским
+                                        графикам.
+                                    </CardDescription>
+                                </div>
+                                <div className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                                    Активно: {activeStatsFiltersCount}
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-5 pt-0">
+                            <form
+                                className="grid gap-3 md:grid-cols-4"
+                                onSubmit={(event) => {
+                                    event.preventDefault();
+                                    applyStatsFilters();
+                                }}
+                            >
+                                <label className="flex flex-col gap-1 text-sm">
+                                    <span className="text-muted-foreground">
+                                        search
+                                    </span>
+                                    <Input
+                                        value={statsFilterDraft.search}
+                                        onChange={(event) =>
+                                            updateStatsFilterDraft(
+                                                "search",
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Название или текст"
+                                    />
+                                </label>
+
+                                <label className="flex flex-col gap-1 text-sm">
+                                    <span className="text-muted-foreground">
+                                        tag
+                                    </span>
+                                    <Input
+                                        value={statsFilterDraft.tag}
+                                        onChange={(event) =>
+                                            updateStatsFilterDraft(
+                                                "tag",
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Тег"
+                                    />
+                                </label>
+
+                                <label className="flex flex-col gap-1 text-sm md:col-span-2">
+                                    <span className="text-muted-foreground">
+                                        parent_key
+                                    </span>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="min-w-0 flex-1 justify-between px-3 font-normal"
+                                            onClick={() =>
+                                                setNotePickerTarget(
+                                                    "parent_key",
+                                                )
+                                            }
+                                        >
+                                            <span className="truncate">
+                                                {parentLabel}
+                                            </span>
+                                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant={
+                                                statsFilterDraft.parent_key ===
+                                                "root"
+                                                    ? "default"
+                                                    : "outline"
+                                            }
+                                            onClick={() =>
+                                                updateStatsFilterDraft(
+                                                    "parent_key",
+                                                    "root",
+                                                )
+                                            }
+                                        >
+                                            Корневые
+                                        </Button>
+                                    </div>
+                                </label>
+
+                                <label className="flex flex-col gap-1 text-sm md:col-span-2">
+                                    <span className="text-muted-foreground">
+                                        linked_note_key
+                                    </span>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="justify-between px-3 font-normal"
+                                        onClick={() =>
+                                            setNotePickerTarget(
+                                                "linked_note_key",
+                                            )
+                                        }
+                                    >
+                                        <span className="truncate">
+                                            {linkedNoteLabel}
+                                        </span>
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                </label>
+
+                                <label className="flex flex-col gap-1 text-sm">
+                                    <span className="text-muted-foreground">
+                                        created_from
+                                    </span>
+                                    <Input
+                                        type="datetime-local"
+                                        value={statsFilterDraft.created_from}
+                                        onChange={(event) =>
+                                            updateStatsFilterDraft(
+                                                "created_from",
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </label>
+
+                                <label className="flex flex-col gap-1 text-sm">
+                                    <span className="text-muted-foreground">
+                                        created_to
+                                    </span>
+                                    <Input
+                                        type="datetime-local"
+                                        value={statsFilterDraft.created_to}
+                                        onChange={(event) =>
+                                            updateStatsFilterDraft(
+                                                "created_to",
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </label>
+
+                                <label className="flex flex-col gap-1 text-sm">
+                                    <span className="text-muted-foreground">
+                                        updated_from
+                                    </span>
+                                    <Input
+                                        type="datetime-local"
+                                        value={statsFilterDraft.updated_from}
+                                        onChange={(event) =>
+                                            updateStatsFilterDraft(
+                                                "updated_from",
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </label>
+
+                                <label className="flex flex-col gap-1 text-sm">
+                                    <span className="text-muted-foreground">
+                                        updated_to
+                                    </span>
+                                    <Input
+                                        type="datetime-local"
+                                        value={statsFilterDraft.updated_to}
+                                        onChange={(event) =>
+                                            updateStatsFilterDraft(
+                                                "updated_to",
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </label>
+
+                                <label className="flex flex-col gap-1 text-sm">
+                                    <span className="text-muted-foreground">
+                                        limit
+                                    </span>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        max={500}
+                                        step={1}
+                                        value={statsFilterDraft.limit}
+                                        onChange={(event) =>
+                                            updateStatsFilterDraft(
+                                                "limit",
+                                                Number.parseInt(
+                                                    event.target.value,
+                                                    10,
+                                                ) || 1,
+                                            )
+                                        }
+                                    />
+                                </label>
+
+                                <div className="flex flex-wrap items-end gap-2 md:col-span-3">
+                                    <Button type="submit">
+                                        Применить фильтр
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={resetStatsFilters}
+                                    >
+                                        <RotateCcw className="h-4 w-4" />
+                                        Сбросить
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
 
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
@@ -653,11 +1102,43 @@ export function StatsPage() {
                                                 )
                                             }
                                         >
-                                            {availableCustomXAxes.map((axis) => (
-                                                <option key={axis} value={axis}>
-                                                    {axisLabels[axis]}
-                                                </option>
-                                            ))}
+                                            {availableCustomXAxes.map(
+                                                (axis) => (
+                                                    <option
+                                                        key={axis}
+                                                        value={axis}
+                                                    >
+                                                        {axisLabels[axis]}
+                                                    </option>
+                                                ),
+                                            )}
+                                        </select>
+                                    </label>
+
+                                    <label className="flex flex-col gap-1 text-sm">
+                                        <span className="text-muted-foreground">
+                                            Серия
+                                        </span>
+                                        <select
+                                            className={selectClassName}
+                                            value={customSeriesAxis}
+                                            onChange={(event) =>
+                                                setCustomSeriesAxis(
+                                                    event.target
+                                                        .value as NoteStatsSeriesAxis,
+                                                )
+                                            }
+                                        >
+                                            {availableCustomSeriesAxes.map(
+                                                (axis) => (
+                                                    <option
+                                                        key={axis}
+                                                        value={axis}
+                                                    >
+                                                        {seriesLabels[axis]}
+                                                    </option>
+                                                ),
+                                            )}
                                         </select>
                                     </label>
 
@@ -778,6 +1259,29 @@ export function StatsPage() {
                     ) : null}
                 </div>
             </main>
+
+            <LogNotePickerModal
+                open={notePickerTarget !== null}
+                notes={filterNotes}
+                loading={filterNotesLoading}
+                error={filterNotesError}
+                selectedNoteKey={
+                    notePickerTarget ? statsFilterDraft[notePickerTarget] : ""
+                }
+                onSelect={(noteKey) => {
+                    if (notePickerTarget) {
+                        updateStatsFilterDraft(notePickerTarget, noteKey);
+                    }
+                    setNotePickerTarget(null);
+                }}
+                onClear={() => {
+                    if (notePickerTarget) {
+                        updateStatsFilterDraft(notePickerTarget, "");
+                    }
+                    setNotePickerTarget(null);
+                }}
+                onClose={() => setNotePickerTarget(null)}
+            />
         </div>
     );
 }
