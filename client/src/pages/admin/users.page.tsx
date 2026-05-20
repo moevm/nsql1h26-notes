@@ -285,7 +285,7 @@ export function AdminUsersPage() {
                                             Заметок
                                         </th>
                                         <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
-                                            Создан
+                                            Зарегистрирован
                                         </th>
                                     </tr>
                                 </thead>
