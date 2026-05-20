@@ -26,6 +26,42 @@ class UserRepository:
             if row
         ]
 
+    def get_all_summaries(
+        self,
+        role: UserRole | None = None,
+        search: str | None = None,
+    ) -> list[dict]:
+        bind_vars: dict[str, str] = {}
+        filters = []
+        if role:
+            bind_vars["role"] = role.value
+            filters.append("u.role == @role")
+
+        if search:
+            bind_vars["search"] = search
+            filters.append(
+                "(u._key == @search OR LIKE(LOWER(u.username), CONCAT('%', LOWER(@search), '%')) )"
+            )
+
+        query = f"""
+        FOR u IN users
+            LET notes_count = LENGTH(
+                FOR n IN notes
+                    FILTER n.user_ref == u._key
+                    RETURN 1
+            )
+            FILTER {" AND ".join(filters) if filters else "true"}
+            RETURN {{
+                user_key: u._key,
+                username: u.username,
+                role: u.role,
+                created_at: u.created_at,
+                notes_count: notes_count
+            }}
+        """
+        cursor = self.db.aql.execute(query, bind_vars=bind_vars)
+        return list(cursor)
+
     def get_by_username(self, username: str) -> Optional[User]:
         query = """
         FOR u IN users

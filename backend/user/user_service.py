@@ -16,17 +16,20 @@ class UserService:
         self.user_repo = user_repo
         self.note_repo = note_repo
 
-    def get_all_users(self, user: User) -> List[UserResponse]:
+    def get_all_users(
+        self,
+        user: User,
+        role: UserRole | None = None,
+        search: str | None = None,
+    ) -> List[UserResponse]:
         if user.role != UserRole.ADMIN:
             raise HTTPException(403, "You are not allowed to access this resource")
-        users = self.user_repo.get_all()
         return [
-            UserResponse(
-                user_key=u.user_key,
-                username=u.username,
-                role=u.role
+            UserResponse(**row)
+            for row in self.user_repo.get_all_summaries(
+                role=role,
+                search=search,
             )
-            for u in users
         ]
 
 
@@ -63,4 +66,5 @@ class UserService:
             username=user.username,
             role=user.role,
             notes_count=notes_count,
+            created_at=str(user.created_at),
         )
