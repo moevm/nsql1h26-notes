@@ -2,9 +2,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/features/user/hooks/use-auth";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { getRefreshToken } from "@/shared/lib/token-storage";
 
 export const LoginPage = () => {
+    usePageTitle("Вход");
     const navigate = useNavigate();
     const location = useLocation();
     const { login, refresh, loading, error } = useAuth();

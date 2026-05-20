@@ -5,7 +5,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { usersProxy } from "@/entities/user/api/users.proxy";
 import type { GetUserResponse } from "@/entities/user/types/responses";
+import { formatDate } from "@/pages/logs/ui/helpers";
 import { getErrorMessage } from "@/shared/api/error";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { Header } from "@/shared/layout/Header";
 
 export function UserPage() {
@@ -52,6 +54,8 @@ export function UserPage() {
             alive = false;
         };
     }, [userKey]);
+
+    usePageTitle(user ? user.username : "Пользователь");
 
     return (
         <div className="flex min-h-screen flex-col bg-[#fafafa] text-foreground">
@@ -112,6 +116,14 @@ export function UserPage() {
                                 </dt>
                                 <dd className="mt-1 text-sm">
                                     {user.notes_count}
+                                </dd>
+                            </div>
+                            <div className="sm:col-span-2">
+                                <dt className="text-xs font-medium text-muted-foreground">
+                                    Дата регистрации
+                                </dt>
+                                <dd className="mt-1 text-sm text-muted-foreground">
+                                    {formatDate(user.created_at)}
                                 </dd>
                             </div>
                         </dl>

@@ -47,6 +47,7 @@ import { LogUserPickerModal } from "@/pages/logs/ui/log-user-picker-modal";
 import { formatKey } from "@/pages/logs/ui/helpers";
 import { Header } from "@/shared/layout/Header";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
 import { getAccessToken, setAccessToken } from "@/shared/lib/auth-state";
 import {
@@ -439,6 +440,7 @@ function ChartBody({
 }
 
 export function StatsPage() {
+    usePageTitle("Статистика");
     const navigate = useNavigate();
     const currentUser = useAccessTokenPayload();
     const isAdmin = isAdminRole(currentUser?.role);

@@ -19,6 +19,7 @@ import {
     setRefreshToken,
 } from "@/shared/lib/token-storage";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { AccessDenied } from "@/pages/logs/ui/access-denied";
 import { BackupPanel } from "@/pages/logs/ui/backup-panel";
 import { defaultFilters, emptyLogStats } from "@/pages/logs/ui/constants";
@@ -36,6 +37,7 @@ import type {
 } from "@/pages/logs/ui/types";
 
 export function LogsPage({ scope }: { scope: LogsPageScope }) {
+    usePageTitle(scope === "admin" ? "Логи (админ)" : "Мои логи");
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const urlTargetUserKey = searchParams.get("target_user_key") ?? "";
@@ -190,7 +192,7 @@ export function LogsPage({ scope }: { scope: LogsPageScope }) {
             setUsersError(null);
 
             try {
-                const result = await usersProxy.getUsers(token);
+                const result = await usersProxy.getUsersAuth(token);
 
                 if (!alive) {
                     return;

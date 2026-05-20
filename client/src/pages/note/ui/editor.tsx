@@ -32,6 +32,7 @@ import { buildGetNotesRequest } from "@/pages/note/ui/note-filters";
 import { useNoteLayout } from "@/pages/note/ui/note-layout-context";
 import { NoteShareModal } from "@/pages/note/ui/note-share-modal";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
 import { UserLink } from "@/shared/ui/user-link";
 
@@ -127,6 +128,12 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
     const isEditing = mode === "edit";
     const busy = noteLoading || createLoading || updateLoading || deleteLoading;
     const error = noteError || createError || updateError || deleteError;
+
+    usePageTitle(
+        mode === "new"
+            ? "Новая заметка"
+            : title.trim() || loadedNote?.title || "Заметка",
+    );
 
     useEffect(() => {
         if (!isEditing || !noteKey) {

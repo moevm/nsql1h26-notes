@@ -1,23 +1,55 @@
-import { useEffect, useState } from "react";
-import { Loader2, Users } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import {
+    type FormEvent,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+import { Loader2, RotateCcw, Users } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { usersProxy } from "@/entities/user/api/users.proxy";
 import type { GetUsersResponse } from "@/entities/user/types/responses";
 import { getErrorMessage } from "@/shared/api/error";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { Header } from "@/shared/layout/Header";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
-import { clearRefreshToken, clearStoredAccessToken } from "@/shared/lib/token-storage";
+import {
+    clearRefreshToken,
+    clearStoredAccessToken,
+} from "@/shared/lib/token-storage";
 import { UserLink } from "@/shared/ui/user-link";
+import { formatDate } from "@/pages/logs/ui/helpers";
+
+type UserFilters = {
+    search: string;
+    role: string;
+};
+
+const DEFAULT_USER_FILTERS: UserFilters = {
+    search: "",
+    role: "",
+};
+
+const roleOptions = [
+    { value: "", label: "Все роли" },
+    { value: "user", label: "USER" },
+    { value: "admin", label: "ADMIN" },
+];
 
 export function AdminUsersPage() {
+    usePageTitle("Пользователи");
     const navigate = useNavigate();
     const currentUser = useAccessTokenPayload();
     const isAdmin = isAdminRole(currentUser?.role);
     const [users, setUsers] = useState<GetUsersResponse>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [filters, setFilters] = useState<UserFilters>(DEFAULT_USER_FILTERS);
+    const [filterDraft, setFilterDraft] =
+        useState<UserFilters>(DEFAULT_USER_FILTERS);
 
     useEffect(() => {
         let alive = true;
@@ -27,7 +59,10 @@ export function AdminUsersPage() {
             setError(null);
 
             try {
-                const response = await usersProxy.getUsers();
+                const response = await usersProxy.getUsers({
+                    search: filters.search.trim() || undefined,
+                    role: filters.role || undefined,
+                });
 
                 if (alive) {
                     setUsers(response ?? []);
@@ -49,12 +84,32 @@ export function AdminUsersPage() {
         return () => {
             alive = false;
         };
-    }, []);
+    }, [filters]);
+
+    const activeFiltersCount = useMemo(() => {
+        return [filters.search, filters.role].filter((value) => value.trim())
+            .length;
+    }, [filters.role, filters.search]);
 
     const logout = () => {
         clearStoredAccessToken();
         clearRefreshToken();
         navigate("/auth/signin", { replace: true });
+    };
+
+    const applyFilters = (event?: FormEvent<HTMLFormElement>) => {
+        event?.preventDefault();
+        const normalized = {
+            search: filterDraft.search.trim(),
+            role: filterDraft.role.trim(),
+        };
+        setFilterDraft(normalized);
+        setFilters(normalized);
+    };
+
+    const resetFilters = () => {
+        setFilterDraft(DEFAULT_USER_FILTERS);
+        setFilters(DEFAULT_USER_FILTERS);
     };
 
     return (
@@ -92,10 +147,62 @@ export function AdminUsersPage() {
                     <div>
                         <h1 className="text-xl font-semibold">Пользователи</h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Всего в выдаче: {users.length}
+                            Найдено: {users.length}, активных фильтров:{" "}
+                            {activeFiltersCount}
                         </p>
                     </div>
                 </div>
+
+                <form
+                    className="mb-5 grid gap-3 rounded-md border border-black/10 bg-white p-4 md:grid-cols-4"
+                    onSubmit={applyFilters}
+                >
+                    <label className="grid gap-1.5 text-sm md:col-span-2">
+                        <span className="text-muted-foreground">Поиск</span>
+                        <Input
+                            value={filterDraft.search}
+                            onChange={(event) =>
+                                setFilterDraft((current) => ({
+                                    ...current,
+                                    search: event.target.value,
+                                }))
+                            }
+                            placeholder="Username или user key"
+                        />
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm">
+                        <span className="text-muted-foreground">Роль</span>
+                        <select
+                            className="h-10 rounded-md border border-input bg-white px-3 text-sm"
+                            value={filterDraft.role}
+                            onChange={(event) =>
+                                setFilterDraft((current) => ({
+                                    ...current,
+                                    role: event.target.value,
+                                }))
+                            }
+                        >
+                            {roleOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <div className="flex flex-wrap items-end gap-2">
+                        <Button type="submit">Применить</Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={resetFilters}
+                        >
+                            <RotateCcw className="h-4 w-4" />
+                            Сбросить
+                        </Button>
+                    </div>
+                </form>
 
                 {!isAdmin && currentUser ? (
                     <div className="rounded-md border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
@@ -125,6 +232,12 @@ export function AdminUsersPage() {
                                         <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
                                             Роль
                                         </th>
+                                        <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
+                                            Заметок
+                                        </th>
+                                        <th className="border-b border-black/10 px-4 py-3 font-medium text-muted-foreground">
+                                            Создан
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -146,6 +259,17 @@ export function AdminUsersPage() {
                                                 <span className="rounded-md border border-black/10 px-2 py-1 text-xs uppercase text-muted-foreground">
                                                     {user.role}
                                                 </span>
+                                            </td>
+                                            <td className="border-b border-black/10 px-4 py-3">
+                                                <Link
+                                                    to={`/admin/notes?user_key=${encodeURIComponent(user.user_key)}`}
+                                                    className="font-medium underline decoration-black/20 underline-offset-4 hover:decoration-black/60"
+                                                >
+                                                    {user.notes_count}
+                                                </Link>
+                                            </td>
+                                            <td className="border-b border-black/10 px-4 py-3 text-muted-foreground">
+                                                {formatDate(user.created_at)}
                                             </td>
                                         </tr>
                                     ))}

@@ -9,10 +9,12 @@ import type { SharedNoteResponse } from "@/entities/share/types";
 import { useAuth } from "@/features/user/hooks/use-auth";
 import { getErrorMessage } from "@/shared/api/error";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { getRefreshToken } from "@/shared/lib/token-storage";
 import { UserLink } from "@/shared/ui/user-link";
 
 export function SharePage() {
+    usePageTitle("Общий доступ");
     const navigate = useNavigate();
     const { shareKey } = useParams();
     const currentUser = useAccessTokenPayload();

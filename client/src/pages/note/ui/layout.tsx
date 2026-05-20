@@ -5,7 +5,13 @@ import {
     useState,
     type MouseEvent,
 } from "react";
-import { matchPath, Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+    matchPath,
+    Outlet,
+    useLocation,
+    useNavigate,
+    useSearchParams,
+} from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 import { noteProxy } from "@/entities/note/api/proxy";
@@ -27,6 +33,7 @@ import {
     type NoteTreeNode,
 } from "@/pages/note/ui/note-tree";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
 import { Header } from "@/shared/layout/Header";
 import {
@@ -50,8 +57,11 @@ const normalizeFilters = (filters: NoteFilters): NoteFilters => ({
 });
 
 export const NotePageLayout = () => {
+    usePageTitle("Заметки");
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams] = useSearchParams();
+    const urlTag = searchParams.get("tag") ?? "";
     const currentUser = useAccessTokenPayload();
     const isAdmin = isAdminRole(currentUser?.role);
     const { getNotes, loading, error } = useGetNotes();
@@ -85,6 +95,20 @@ export const NotePageLayout = () => {
 
         return () => window.clearTimeout(timer);
     }, [filters.search]);
+
+    useEffect(() => {
+        if (!urlTag) {
+            return;
+        }
+
+        const nextFilters = normalizeFilters({
+            ...DEFAULT_NOTE_FILTERS,
+            tag: urlTag,
+        });
+
+        setFilters(nextFilters);
+        setDebouncedSearch(nextFilters.search);
+    }, [urlTag]);
 
     const noteRequest = useMemo(
         () =>

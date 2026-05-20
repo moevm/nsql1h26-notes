@@ -2,8 +2,10 @@ import { useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/features/user/hooks/use-auth";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 
 export const RegisterPage = () => {
+    usePageTitle("Регистрация");
     const navigate = useNavigate();
     const location = useLocation();
     const { register, loading, error } = useAuth();

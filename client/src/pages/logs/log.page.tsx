@@ -5,7 +5,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { logsProxy } from "@/entities/logs/api/proxy";
 import type { Log } from "@/entities/logs/types/responses";
 import { getErrorMessage } from "@/shared/api/error";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { Header } from "@/shared/layout/Header";
+import { getLogTitle } from "@/pages/logs/ui/helpers";
 import { LogCard } from "@/pages/logs/ui/log-card";
 
 export function LogPage() {
@@ -53,6 +55,8 @@ export function LogPage() {
         };
     }, [logKey]);
 
+    usePageTitle(log ? getLogTitle(log) : "Лог");
+
     return (
         <div className="flex min-h-screen flex-col bg-[#fafafa] text-foreground">
             <Header
@@ -82,7 +86,7 @@ export function LogPage() {
                         {error}
                     </div>
                 ) : log ? (
-                    <LogCard log={log} />
+                    <LogCard log={log} interactive />
                 ) : null}
             </main>
         </div>

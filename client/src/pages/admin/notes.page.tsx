@@ -6,7 +6,7 @@ import {
     useState,
 } from "react";
 import { ChevronDown, FileText, Loader2, RotateCcw } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { usersProxy } from "@/entities/user/api/users.proxy";
 import type { GetUsersResponse } from "@/entities/user/types/responses";
 import { getErrorMessage } from "@/shared/api/error";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { Header } from "@/shared/layout/Header";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
 import {
@@ -56,7 +57,11 @@ const normalizeFilters = (filters: NoteFilters): NoteFilters => ({
 });
 
 export function AdminNotesPage() {
+    usePageTitle("Заметки (админ)");
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const urlUserKey = searchParams.get("user_key") ?? "";
+    const urlTag = searchParams.get("tag") ?? "";
     const currentUser = useAccessTokenPayload();
     const isAdmin = isAdminRole(currentUser?.role);
     const [notes, setNotes] = useState<Note[]>([]);
@@ -85,6 +90,22 @@ export function AdminNotesPage() {
     useEffect(() => {
         setLimitDraft(String(filters.limit));
     }, [filters.limit]);
+
+    useEffect(() => {
+        if (!urlUserKey && !urlTag) {
+            return;
+        }
+
+        const nextFilters = normalizeFilters({
+            ...ADMIN_NOTE_FILTERS,
+            user_key: urlUserKey,
+            tag: urlTag,
+        });
+
+        setLastPageOffset(null);
+        setFilterDraft(nextFilters);
+        setFilters(nextFilters);
+    }, [urlTag, urlUserKey]);
 
     useEffect(() => {
         let alive = true;
