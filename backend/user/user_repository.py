@@ -30,6 +30,8 @@ class UserRepository:
         self,
         role: UserRole | None = None,
         search: str | None = None,
+        created_from: str | None = None,
+        created_to: str | None = None,
     ) -> list[dict]:
         bind_vars: dict[str, str] = {}
         filters = []
@@ -42,6 +44,14 @@ class UserRepository:
             filters.append(
                 "(u._key == @search OR LIKE(LOWER(u.username), CONCAT('%', LOWER(@search), '%')) )"
             )
+
+        if created_from:
+            bind_vars["created_from"] = created_from
+            filters.append("u.created_at >= @created_from")
+
+        if created_to:
+            bind_vars["created_to"] = created_to
+            filters.append("u.created_at <= @created_to")
 
         query = f"""
         FOR u IN users

@@ -25,11 +25,15 @@ def get_users(
     service: UserService = Depends(get_user_service),
     role: Optional[UserRole] = None,
     search: Optional[str] = None,
+    created_from: Optional[str] = None,
+    created_to: Optional[str] = None,
 ) -> List[UserResponse]:
     return service.get_all_users(
         user,
         role=role,
         search=search,
+        created_from=created_from,
+        created_to=created_to,
     )
 
 @router.get("/{user_key}", response_model=UserDetailsResponse)

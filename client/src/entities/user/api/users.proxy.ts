@@ -14,6 +14,8 @@ class UsersProxy {
             role?: string;
             sort_by?: string;
             sort_order?: string;
+            created_from?: string;
+            created_to?: string;
         },
     ): Promise<GetUsersResponse | null> => {
         try {
@@ -25,6 +27,8 @@ class UsersProxy {
                     ...(params.role ? { role: params.role } : {}),
                     ...(params.sort_by ? { sort_by: params.sort_by } : {}),
                     ...(params.sort_order ? { sort_order: params.sort_order } : {}),
+                    ...(params.created_from ? { created_from: params.created_from } : {}),
+                    ...(params.created_to ? { created_to: params.created_to } : {}),
                 };
             }
 

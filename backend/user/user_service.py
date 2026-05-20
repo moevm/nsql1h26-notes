@@ -21,6 +21,8 @@ class UserService:
         user: User,
         role: UserRole | None = None,
         search: str | None = None,
+        created_from: str | None = None,
+        created_to: str | None = None,
     ) -> List[UserResponse]:
         if user.role != UserRole.ADMIN:
             raise HTTPException(403, "You are not allowed to access this resource")
@@ -29,6 +31,8 @@ class UserService:
             for row in self.user_repo.get_all_summaries(
                 role=role,
                 search=search,
+                created_from=created_from,
+                created_to=created_to,
             )
         ]
 

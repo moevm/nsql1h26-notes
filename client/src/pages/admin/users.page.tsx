@@ -26,6 +26,8 @@ import { formatDate } from "@/pages/logs/ui/helpers";
 type UserFilters = {
     search: string;
     role: string;
+    created_from?: string;
+    created_to?: string;
 };
 
 const DEFAULT_USER_FILTERS: UserFilters = {
@@ -62,6 +64,8 @@ export function AdminUsersPage() {
                 const response = await usersProxy.getUsers({
                     search: filters.search.trim() || undefined,
                     role: filters.role || undefined,
+                    created_from: filters.created_from || undefined,
+                    created_to: filters.created_to || undefined,
                 });
 
                 if (alive) {
@@ -87,9 +91,13 @@ export function AdminUsersPage() {
     }, [filters]);
 
     const activeFiltersCount = useMemo(() => {
-        return [filters.search, filters.role].filter((value) => value.trim())
-            .length;
-    }, [filters.role, filters.search]);
+        return [
+            filters.search,
+            filters.role,
+            filters.created_from ?? "",
+            filters.created_to ?? "",
+        ].filter((value) => value && value.toString().trim()).length;
+    }, [filters.role, filters.search, filters.created_from, filters.created_to]);
 
     const logout = () => {
         clearStoredAccessToken();
@@ -99,12 +107,25 @@ export function AdminUsersPage() {
 
     const applyFilters = (event?: FormEvent<HTMLFormElement>) => {
         event?.preventDefault();
-        const normalized = {
+        const rawDraft = {
             search: filterDraft.search.trim(),
             role: filterDraft.role.trim(),
-        };
-        setFilterDraft(normalized);
-        setFilters(normalized);
+            created_from: filterDraft.created_from,
+            created_to: filterDraft.created_to,
+        } as UserFilters;
+
+        const queryFilters = {
+            ...rawDraft,
+            created_from: rawDraft.created_from
+                ? new Date(rawDraft.created_from).toISOString()
+                : undefined,
+            created_to: rawDraft.created_to
+                ? new Date(rawDraft.created_to).toISOString()
+                : undefined,
+        } as UserFilters;
+
+        setFilterDraft(rawDraft);
+        setFilters(queryFilters);
     };
 
     const resetFilters = () => {
@@ -189,6 +210,34 @@ export function AdminUsersPage() {
                                 </option>
                             ))}
                         </select>
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm">
+                        <span className="text-muted-foreground">Зарегистирован с</span>
+                            <Input
+                                type="datetime-local"
+                                value={filterDraft.created_from ?? ""}
+                                onChange={(e) =>
+                                    setFilterDraft((current) => ({
+                                        ...current,
+                                        created_from: e.target.value,
+                                    }))
+                                }
+                            />
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm">
+                        <span className="text-muted-foreground">Зарегистрирован по</span>
+                            <Input
+                                type="datetime-local"
+                                value={filterDraft.created_to ?? ""}
+                                onChange={(e) =>
+                                    setFilterDraft((current) => ({
+                                        ...current,
+                                        created_to: e.target.value,
+                                    }))
+                                }
+                            />
                     </label>
 
                     <div className="flex flex-wrap items-end gap-2">
