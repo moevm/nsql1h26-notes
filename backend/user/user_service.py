@@ -7,7 +7,7 @@ from core.security import hash_password
 from model.user import User
 from note.note_repository import NoteRepository
 from user.user_repository import UserRepository
-from user.user_schemas import UserResponse, UserDetailsResponse
+from user.user_schemas import UserResponse, UserDetailsResponse, UserFilter
 
 
 class UserService:
@@ -19,20 +19,19 @@ class UserService:
     def get_all_users(
         self,
         user: User,
-        role: UserRole | None = None,
-        search: str | None = None,
-        created_from: str | None = None,
-        created_to: str | None = None,
+        filters: UserFilter,
     ) -> List[UserResponse]:
         if user.role != UserRole.ADMIN:
             raise HTTPException(403, "You are not allowed to access this resource")
         return [
             UserResponse(**row)
             for row in self.user_repo.get_all_summaries(
-                role=role,
-                search=search,
-                created_from=created_from,
-                created_to=created_to,
+                role=filters.role,
+                search=filters.search,
+                created_from=filters.created_from,
+                created_to=filters.created_to,
+                limit=filters.limit,
+                offset=filters.offset,
             )
         ]
 

@@ -16,6 +16,8 @@ class UsersProxy {
             sort_order?: string;
             created_from?: string;
             created_to?: string;
+            limit?: number;
+            offset?: number;
         },
     ): Promise<GetUsersResponse | null> => {
         try {
@@ -29,6 +31,8 @@ class UsersProxy {
                     ...(params.sort_order ? { sort_order: params.sort_order } : {}),
                     ...(params.created_from ? { created_from: params.created_from } : {}),
                     ...(params.created_to ? { created_to: params.created_to } : {}),
+                    ...(typeof params.limit === "number" ? { limit: String(params.limit) } : {}),
+                    ...(typeof params.offset === "number" ? { offset: String(params.offset) } : {}),
                 };
             }
 

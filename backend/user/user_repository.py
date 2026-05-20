@@ -32,8 +32,10 @@ class UserRepository:
         search: str | None = None,
         created_from: str | None = None,
         created_to: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> list[dict]:
-        bind_vars: dict[str, str] = {}
+        bind_vars: dict[str, str | int] = {}
         filters = []
         if role:
             bind_vars["role"] = role.value
@@ -53,6 +55,9 @@ class UserRepository:
             bind_vars["created_to"] = created_to
             filters.append("u.created_at <= @created_to")
 
+        bind_vars["limit"] = limit
+        bind_vars["offset"] = offset
+
         query = f"""
         FOR u IN users
             LET notes_count = LENGTH(
@@ -61,6 +66,8 @@ class UserRepository:
                     RETURN 1
             )
             FILTER {" AND ".join(filters) if filters else "true"}
+            SORT u._key ASC
+            LIMIT @offset, @limit
             RETURN {{
                 user_key: u._key,
                 username: u.username,
