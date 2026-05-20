@@ -79,6 +79,7 @@ class NoteResponse(NoteBase):
 
 
 class NoteFilter(BaseModel):
+    user_key: str | None = None
     parent_key: str | None | Literal["root"] = None
     linked_note_key: str | None = None
     tag: str | None = None
@@ -108,6 +109,7 @@ class NoteFilter(BaseModel):
 
 
 class NoteStatsFilter(BaseModel):
+    user_key: str | None = None
     parent_key: str | None | Literal["root"] = None
     linked_note_key: str | None = None
     tag: str | None = None
@@ -153,6 +155,7 @@ class NoteStatsResponse(BaseModel):
 
 
 class NoteStatsChartFilter(BaseModel):
+    user_key: str | None = None
     parent_key: str | None | Literal["root"] = None
     linked_note_key: str | None = None
     tag: str | None = None

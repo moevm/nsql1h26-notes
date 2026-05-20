@@ -8,3 +8,10 @@ export type GetUsersResponse = {
     username: string
     role: string
 }[]
+
+export type GetUserResponse = {
+    user_key: string
+    username: string
+    role: string
+    notes_count: number
+}

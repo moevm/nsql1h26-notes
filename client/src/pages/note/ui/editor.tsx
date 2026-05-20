@@ -3,9 +3,17 @@ import {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react";
-import { Loader2, Plus, Save, Share2, Trash2, X } from "lucide-react";
+import {
+    Loader2,
+    Plus,
+    Save,
+    Share2,
+    Trash2,
+    X,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -16,12 +24,16 @@ import { useCreateNote } from "@/features/note/hooks/use-create-note";
 import { useDeleteNote } from "@/features/note/hooks/use-delete-note";
 import { useGetNoteByKey } from "@/features/note/hooks/use-get-note-by-key";
 import { useUpdateNote } from "@/features/note/hooks/use-update-note";
+import { noteProxy } from "@/entities/note/api/proxy";
 import type { Note } from "@/entities/note/types/dto";
 import type { CreateNoteRequest } from "@/entities/note/types/requests";
 import { cn } from "@/lib/utils";
+import { buildGetNotesRequest } from "@/pages/note/ui/note-filters";
 import { useNoteLayout } from "@/pages/note/ui/note-layout-context";
 import { NoteShareModal } from "@/pages/note/ui/note-share-modal";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
+import { isAdminRole } from "@/shared/lib/access-token-payload";
+import { UserLink } from "@/shared/ui/user-link";
 
 type NoteEditorMode = "new" | "edit";
 
@@ -37,6 +49,20 @@ function normalizeTags(tags: string[]) {
 
 function parseTagInput(value: string) {
     return normalizeTags(value.split(/[\n,]/g));
+}
+
+function normalizeLinkedNoteKeys(keys: string[]) {
+    return Array.from(new Set(keys.map((key) => key.trim()).filter(Boolean)));
+}
+
+function normalizeWikiTitle(value: string) {
+    return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function extractWikiLinkTitles(content: string) {
+    return Array.from(content.matchAll(/\[\[([^\]]+)]]/g))
+        .map((match) => match[1]?.trim() ?? "")
+        .filter(Boolean);
 }
 
 function splitContent(content: string) {
@@ -60,6 +86,7 @@ function formatNoteTimestamp(value: string) {
 export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
     const navigate = useNavigate();
     const currentUser = useAccessTokenPayload();
+    const isAdmin = isAdminRole(currentUser?.role);
     const { refreshNotes } = useNoteLayout();
     const {
         getNoteByKey,
@@ -87,10 +114,15 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
     const [title, setTitle] = useState("");
     const [lines, setLines] = useState<string[]>([""]);
     const [activeLineIndex, setActiveLineIndex] = useState(0);
+    const [cursorPosition, setCursorPosition] = useState(0);
     const [tags, setTags] = useState<string[]>([]);
     const [tagDraft, setTagDraft] = useState("");
+    const [linkedNoteKeys, setLinkedNoteKeys] = useState<string[]>([]);
+    const [availableNotes, setAvailableNotes] = useState<Note[]>([]);
+    const [availableNotesLoading, setAvailableNotesLoading] = useState(false);
     const [savingHint, setSavingHint] = useState<string | null>(null);
     const [shareOpen, setShareOpen] = useState(false);
+    const lineRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
 
     const isEditing = mode === "edit";
     const busy = noteLoading || createLoading || updateLoading || deleteLoading;
@@ -104,6 +136,7 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
             setActiveLineIndex(0);
             setTags([]);
             setTagDraft("");
+            setLinkedNoteKeys([]);
             return;
         }
 
@@ -122,6 +155,7 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
             setLines(nextLines);
             setActiveLineIndex(Math.max(nextLines.length - 1, 0));
             setTags(note?.tags ?? []);
+            setLinkedNoteKeys(note?.linked_note_keys ?? []);
             setTagDraft("");
         };
 
@@ -132,6 +166,37 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
         };
     }, [getNoteByKey, isEditing, noteKey]);
 
+    useEffect(() => {
+        let alive = true;
+
+        const loadAvailableNotes = async () => {
+            setAvailableNotesLoading(true);
+            const notes = await noteProxy.getNotes(
+                buildGetNotesRequest({
+                    limit: 256,
+                    offset: 0,
+                    user_key:
+                        isAdmin && currentUser?.sub
+                            ? currentUser.sub
+                            : undefined,
+                }),
+            );
+
+            if (!alive) {
+                return;
+            }
+
+            setAvailableNotes(notes);
+            setAvailableNotesLoading(false);
+        };
+
+        void loadAvailableNotes();
+
+        return () => {
+            alive = false;
+        };
+    }, [currentUser?.sub, isAdmin]);
+
     const effectiveParentKey = useMemo(() => {
         if (isEditing) {
             return loadedNote?.parent_key ?? null;
@@ -140,6 +205,117 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
         return parentKey ?? null;
     }, [isEditing, loadedNote?.parent_key, parentKey]);
 
+    const notesByKey = useMemo(() => {
+        return new Map(availableNotes.map((note) => [note.note_key, note]));
+    }, [availableNotes]);
+
+    const notesByTitle = useMemo(() => {
+        const map = new Map<string, Note>();
+
+        availableNotes.forEach((note) => {
+            const key = normalizeWikiTitle(note.title);
+
+            if (key && !map.has(key)) {
+                map.set(key, note);
+            }
+        });
+
+        return map;
+    }, [availableNotes]);
+
+    const content = useMemo(() => lines.join("\n"), [lines]);
+
+    const contentLinkedNoteKeys = useMemo(() => {
+        return normalizeLinkedNoteKeys(
+            extractWikiLinkTitles(content)
+                .map((title) => notesByTitle.get(normalizeWikiTitle(title)))
+                .filter((note): note is Note => Boolean(note))
+                .map((note) => note.note_key)
+                .filter((key) => key !== noteKey),
+        );
+    }, [content, noteKey, notesByTitle]);
+
+    const outgoingLinkedNotes = useMemo(() => {
+        const keys = contentLinkedNoteKeys.length
+            ? contentLinkedNoteKeys
+            : linkedNoteKeys;
+
+        return keys
+            .map((key) => notesByKey.get(key))
+            .filter((note): note is Note => Boolean(note));
+    }, [contentLinkedNoteKeys, linkedNoteKeys, notesByKey]);
+
+    const incomingLinkedNotes = useMemo(() => {
+        if (!noteKey) {
+            return [];
+        }
+
+        return availableNotes.filter(
+            (note) =>
+                note.note_key !== noteKey &&
+                (note.linked_note_keys ?? []).includes(noteKey),
+        );
+    }, [availableNotes, noteKey]);
+
+    const renderWikiLinks = useCallback(
+        (value: string) =>
+            value.replace(/\[\[([^\]]+)]]/g, (match, rawTitle: string) => {
+                const title = rawTitle.trim();
+                const note = notesByTitle.get(normalizeWikiTitle(title));
+
+                if (!note) {
+                    return match;
+                }
+
+                return `[${title}](/notes/${note.note_key})`;
+            }),
+        [notesByTitle],
+    );
+
+    const activeWikiQuery = useMemo(() => {
+        const line = lines[activeLineIndex] ?? "";
+        const beforeCursor = line.slice(0, cursorPosition);
+        const afterCursor = line.slice(cursorPosition);
+        const match = beforeCursor.match(/\[\[([^\]]*)$/);
+
+        if (!match || !afterCursor.startsWith("]]")) {
+            return null;
+        }
+
+        return match[1] ?? "";
+    }, [activeLineIndex, cursorPosition, lines]);
+
+    const wikiNoteOptions = useMemo(() => {
+        if (activeWikiQuery === null) {
+            return [];
+        }
+
+        const query = normalizeWikiTitle(activeWikiQuery);
+
+        return availableNotes
+            .filter((note) => note.note_key !== noteKey)
+            .filter((note) => normalizeWikiTitle(note.title).includes(query))
+            .slice(0, 8);
+    }, [activeWikiQuery, availableNotes, noteKey]);
+
+    const insertWikiNote = (note: Note) => {
+        const line = lines[activeLineIndex] ?? "";
+        const beforeCursor = line.slice(0, cursorPosition);
+        const afterCursor = line.slice(cursorPosition);
+        const match = beforeCursor.match(/\[\[([^\]]*)$/);
+
+        if (!match || !afterCursor.startsWith("]]")) {
+            return;
+        }
+
+        const start = beforeCursor.length - match[0].length;
+        const nextLine = `${line.slice(0, start)}[[${note.title}]]${afterCursor.slice(2)}`;
+
+        updateLine(activeLineIndex, nextLine);
+        setActiveLineIndex(-1);
+        setCursorPosition(0);
+    };
+
     const updateLine = useCallback((index: number, value: string) => {
         setLines((current) =>
             current.map((line, lineIndex) =>
@@ -147,6 +323,24 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
             ),
         );
     }, []);
+
+    const setLineSelection = useCallback((index: number, position: number) => {
+        window.requestAnimationFrame(() => {
+            const textarea = lineRefs.current[index];
+
+            if (!textarea) {
+                return;
+            }
+
+            textarea.focus();
+            textarea.setSelectionRange(position, position);
+            setCursorPosition(position);
+        });
+    }, []);
+
+    const updateCursorPosition = (element: HTMLTextAreaElement) => {
+        setCursorPosition(element.selectionStart);
+    };
 
     const insertLineAfter = useCallback((index: number, value: string) => {
         setLines((current) => {
@@ -173,9 +367,10 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
     const save = useCallback(async () => {
         const payload: CreateNoteRequest = {
             title: title.trim(),
-            content: lines.join("\n"),
+            content,
             parent_key: effectiveParentKey,
             tags: normalizeTags(tags),
+            linked_note_keys: contentLinkedNoteKeys,
         };
 
         setSavingHint(null);
@@ -188,6 +383,7 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
                       title: payload.title,
                       content: payload.content,
                       tags: payload.tags,
+                      linked_note_keys: payload.linked_note_keys,
                   });
 
             if (!updated) {
@@ -200,6 +396,7 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
             setLines(nextLines);
             setActiveLineIndex(Math.max(nextLines.length - 1, 0));
             setTags(updated.tags);
+            setLinkedNoteKeys(updated.linked_note_keys ?? []);
             setSavingHint("Сохранено");
             refreshNotes();
             return;
@@ -214,11 +411,12 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
         setSavingHint("Создано");
         navigate(`/notes/${created.note_key}`, { replace: true });
     }, [
+        content,
+        contentLinkedNoteKeys,
         createNote,
         currentUser?.sub,
         effectiveParentKey,
         isEditing,
-        lines,
         loadedNote?.user_ref,
         navigate,
         noteKey,
@@ -280,7 +478,29 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
         event: ReactKeyboardEvent<HTMLTextAreaElement>,
         index: number,
     ) => {
+        if (event.key === "[") {
+            const textarea = event.currentTarget;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const line = lines[index] ?? "";
+
+            if (start > 0 && start === end && line[start - 1] === "[") {
+                event.preventDefault();
+
+                const nextLine = `${line.slice(0, start)}[]]${line.slice(end)}`;
+                updateLine(index, nextLine);
+                setLineSelection(index, start + 1);
+                return;
+            }
+        }
+
         if (event.key === "Enter" && !event.shiftKey) {
+            if (wikiNoteOptions.length && activeWikiQuery !== null) {
+                event.preventDefault();
+                insertWikiNote(wikiNoteOptions[0]);
+                return;
+            }
+
             event.preventDefault();
             insertLineAfter(index, lines[index] ?? "");
             return;
@@ -328,9 +548,10 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                             <p>
                                 Создатель:{" "}
-                                <span className="text-foreground">
-                                    {loadedNote.username || "Неизвестно"}
-                                </span>
+                                <UserLink
+                                    userKey={loadedNote.user_ref}
+                                    username={loadedNote.username}
+                                />
                             </p>
                             <p>
                                 Создана:{" "}
@@ -475,6 +696,82 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
                             </div>
                         </div>
 
+                        <div className="grid gap-2">
+                            <span className="text-sm font-medium">
+                                Связанные заметки
+                            </span>
+                            {availableNotesLoading ? (
+                                <span className="text-sm text-muted-foreground">
+                                    Загрузка связей...
+                                </span>
+                            ) : null}
+
+                            <div className="grid gap-2 rounded-md border border-black/5 bg-white px-3 py-2">
+                                <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                                    Из этой заметки
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    {outgoingLinkedNotes.length ? (
+                                        outgoingLinkedNotes.map((note) => (
+                                            <button
+                                                key={note.note_key}
+                                                type="button"
+                                                onClick={() =>
+                                                    navigate(
+                                                        `/notes/${note.note_key}`,
+                                                    )
+                                                }
+                                                className="inline-flex max-w-full items-center gap-2 rounded-md bg-blue-50 px-2.5 py-1 text-sm text-blue-900 hover:bg-blue-100"
+                                                title={note.title}
+                                            >
+                                                <span className="truncate">
+                                                    {note.title ||
+                                                        note.note_key}
+                                                </span>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <span className="text-sm text-muted-foreground">
+                                            Напишите [[название заметки]] в
+                                            тексте
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="grid gap-2 rounded-md border border-black/5 bg-white px-3 py-2">
+                                <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                                    Ссылаются сюда
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    {incomingLinkedNotes.length ? (
+                                        incomingLinkedNotes.map((note) => (
+                                            <button
+                                                key={note.note_key}
+                                                type="button"
+                                                onClick={() =>
+                                                    navigate(
+                                                        `/notes/${note.note_key}`,
+                                                    )
+                                                }
+                                                className="inline-flex max-w-full items-center gap-2 rounded-md bg-black/5 px-2.5 py-1 text-sm hover:bg-black/10"
+                                                title={note.title}
+                                            >
+                                                <span className="truncate">
+                                                    {note.title ||
+                                                        note.note_key}
+                                                </span>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <span className="text-sm text-muted-foreground">
+                                            Обратных ссылок пока нет
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                         <label className="grid gap-2">
                             <div className="w-full">
                                 <div className="space-y-0">
@@ -484,30 +781,92 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
 
                                         if (isActive) {
                                             return (
-                                                <Textarea
-                                                    key={`line-${index}`}
-                                                    autoFocus
-                                                    value={line}
-                                                    onChange={(event) =>
-                                                        updateLine(
-                                                            index,
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                    onFocus={() =>
-                                                        setActiveLineIndex(
-                                                            index,
-                                                        )
-                                                    }
-                                                    onKeyDown={(event) =>
-                                                        handleLineKeyDown(
-                                                            event,
-                                                            index,
-                                                        )
-                                                    }
-                                                    placeholder="Печатай текст здесь"
-                                                    className="min-h-[44px] outline-0 resize-none border-0 bg-transparent px-0 py-0 text-[15px] leading-7 shadow-none focus-visible:ring-0"
-                                                />
+                                                <div key={`line-${index}`}>
+                                                    <Textarea
+                                                        ref={(element) => {
+                                                            lineRefs.current[
+                                                                index
+                                                            ] = element;
+                                                        }}
+                                                        autoFocus
+                                                        value={line}
+                                                        onChange={(event) =>
+                                                            updateLine(
+                                                                index,
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        onFocus={() =>
+                                                            setActiveLineIndex(
+                                                                index,
+                                                            )
+                                                        }
+                                                        onClick={(event) =>
+                                                            updateCursorPosition(
+                                                                event.currentTarget,
+                                                            )
+                                                        }
+                                                        onKeyUp={(event) =>
+                                                            updateCursorPosition(
+                                                                event.currentTarget,
+                                                            )
+                                                        }
+                                                        onSelect={(event) =>
+                                                            updateCursorPosition(
+                                                                event.currentTarget,
+                                                            )
+                                                        }
+                                                        onKeyDown={(event) =>
+                                                            handleLineKeyDown(
+                                                                event,
+                                                                index,
+                                                            )
+                                                        }
+                                                        placeholder="Печатай текст здесь"
+                                                        className="min-h-[44px] outline-0 resize-none border-0 bg-transparent px-0 py-0 text-[15px] leading-7 shadow-none focus-visible:ring-0"
+                                                    />
+                                                    {activeWikiQuery !== null ? (
+                                                        <div className="mb-2 max-h-56 overflow-y-auto rounded-md border border-black/10 bg-white py-1 shadow-sm">
+                                                            {wikiNoteOptions.length ? (
+                                                                wikiNoteOptions.map(
+                                                                    (note) => (
+                                                                        <button
+                                                                            key={
+                                                                                note.note_key
+                                                                            }
+                                                                            type="button"
+                                                                            onMouseDown={(
+                                                                                event,
+                                                                            ) => {
+                                                                                event.preventDefault();
+                                                                                insertWikiNote(
+                                                                                    note,
+                                                                                );
+                                                                            }}
+                                                                            className="flex w-full flex-col px-3 py-2 text-left text-sm hover:bg-black/5"
+                                                                        >
+                                                                            <span className="font-medium">
+                                                                                {note.title ||
+                                                                                    note.note_key}
+                                                                            </span>
+                                                                            <span className="truncate text-xs text-muted-foreground">
+                                                                                {
+                                                                                    note.username
+                                                                                }
+                                                                            </span>
+                                                                        </button>
+                                                                    ),
+                                                                )
+                                                            ) : (
+                                                                <div className="px-3 py-2 text-sm text-muted-foreground">
+                                                                    Заметка не
+                                                                    найдена
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : null}
+                                                </div>
                                             );
                                         }
 
@@ -522,7 +881,9 @@ export function NoteEditor({ mode, noteKey, parentKey }: NoteEditorProps) {
                                             >
                                                 {line.trim() ? (
                                                     <Markdown
-                                                        content={line}
+                                                        content={renderWikiLinks(
+                                                            line,
+                                                        )}
                                                         className="max-w-none space-y-0"
                                                     />
                                                 ) : (

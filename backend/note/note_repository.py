@@ -204,7 +204,7 @@ class NoteRepository:
 
         return next(cursor, None) is not None
 
-    def get_by_user(self, user_ref: str, filters: NoteFilter) -> list[dict]:
+    def get_by_user(self, user_ref: str | None, filters: NoteFilter) -> list[dict]:
         bind_vars = {
             "limit": filters.limit,
             "offset": filters.offset,
@@ -213,7 +213,7 @@ class NoteRepository:
 
         query = f"""
         FOR n IN notes
-            FILTER {" AND ".join(filters_list)}
+            FILTER {" AND ".join(filters_list) if filters_list else "true"}
             LET u = DOCUMENT("users", n.user_ref)
             LET linked_note_keys = (
                 FOR e IN note_links

@@ -10,6 +10,7 @@ import { useAuth } from "@/features/user/hooks/use-auth";
 import { getErrorMessage } from "@/shared/api/error";
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
 import { getRefreshToken } from "@/shared/lib/token-storage";
+import { UserLink } from "@/shared/ui/user-link";
 
 export function SharePage() {
     const navigate = useNavigate();
@@ -108,7 +109,11 @@ export function SharePage() {
                                     {note.title || "Без названия"}
                                 </h1>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    Автор: {note.username || "Неизвестно"}
+                                    Автор:{" "}
+                                    <UserLink
+                                        userKey={note.user_ref}
+                                        username={note.username}
+                                    />
                                 </p>
                             </div>
 

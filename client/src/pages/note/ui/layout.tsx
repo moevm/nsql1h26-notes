@@ -29,11 +29,16 @@ import {
 import { useAccessTokenPayload } from "@/shared/hooks/use-access-token-payload";
 import { isAdminRole } from "@/shared/lib/access-token-payload";
 import { Header } from "@/shared/layout/Header";
-import { clearRefreshToken, clearStoredAccessToken } from "@/shared/lib/token-storage";
+import {
+    clearRefreshToken,
+    clearStoredAccessToken,
+} from "@/shared/lib/token-storage";
 
 const normalizeFilters = (filters: NoteFilters): NoteFilters => ({
     ...filters,
+    user_key: (filters.user_key ?? "").trim(),
     parent_key: filters.parent_key.trim(),
+    linked_note_key: filters.linked_note_key.trim(),
     tag: filters.tag.trim(),
     search: filters.search.trim(),
     created_from: filters.created_from.trim(),
@@ -84,27 +89,12 @@ export const NotePageLayout = () => {
     const noteRequest = useMemo(
         () =>
             buildGetNotesRequest({
-                parent_key: filters.parent_key,
-                tag: filters.tag,
+                ...filters,
                 search: debouncedSearch,
-                created_from: filters.created_from,
-                updated_from: filters.updated_from,
-                created_to: filters.created_to,
-                updated_to: filters.updated_to,
-                limit: filters.limit,
-                offset: filters.offset,
+                user_key:
+                    isAdmin && currentUser?.sub ? currentUser.sub : filters.user_key,
             }),
-        [
-            debouncedSearch,
-            filters.created_from,
-            filters.created_to,
-            filters.limit,
-            filters.offset,
-            filters.parent_key,
-            filters.tag,
-            filters.updated_from,
-            filters.updated_to,
-        ],
+        [currentUser?.sub, debouncedSearch, filters, isAdmin],
     );
 
     useEffect(() => {
@@ -135,10 +125,16 @@ export const NotePageLayout = () => {
         let alive = true;
 
         const loadFilterNotes = async () => {
-            const result = await getFilterNotes({
-                limit: 256,
-                offset: 0,
-            });
+            const result = await getFilterNotes(
+                buildGetNotesRequest({
+                    limit: 256,
+                    offset: 0,
+                    user_key:
+                        isAdmin && currentUser?.sub
+                            ? currentUser.sub
+                            : undefined,
+                }),
+            );
 
             if (!alive || !result) {
                 return;
@@ -152,7 +148,7 @@ export const NotePageLayout = () => {
         return () => {
             alive = false;
         };
-    }, [filtersOpen, getFilterNotes, reloadIndex]);
+    }, [currentUser?.sub, filtersOpen, getFilterNotes, isAdmin, reloadIndex]);
 
     useEffect(() => {
         const closeMenu = () => setContextMenu(null);
@@ -282,6 +278,11 @@ export const NotePageLayout = () => {
                             title: "Моя страница",
                             onClick: () => navigate("/logs/my"),
                             variant: "secondary",
+                        },
+                        {
+                            title: "Статистика",
+                            onClick: () => navigate("/stats"),
+                            variant: "outline",
                         },
                         ...(isAdmin
                             ? [

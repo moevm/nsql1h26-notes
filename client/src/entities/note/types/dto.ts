@@ -3,6 +3,7 @@ export type Note = {
     content: string
     parent_key: string | null
     tags: string[]
+    linked_note_keys: string[]
     note_key: string
     user_ref: string
     username: string

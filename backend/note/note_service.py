@@ -313,7 +313,22 @@ class NoteService:
         if not ok:
             raise HTTPException(404, "Note not found")
 
-    def get_user_notes(self, user_ref: str, filters: NoteFilter) -> List[NoteResponse]:
+    @staticmethod
+    def _validate_user_key_filter(user: User, user_key: str | None) -> None:
+        if user_key is not None and user.role != UserRole.ADMIN:
+            raise HTTPException(403, "Admin access required to filter by user")
+
+    @staticmethod
+    def _resolve_notes_user_ref(user: User, filters: NoteFilter) -> str | None:
+        if filters.user_key is not None:
+            return filters.user_key
+        if user.role == UserRole.ADMIN:
+            return None
+        return user.user_key
+
+    def get_user_notes(self, user: User, filters: NoteFilter) -> List[NoteResponse]:
+        self._validate_user_key_filter(user, filters.user_key)
+        user_ref = self._resolve_notes_user_ref(user, filters)
         notes = self.repo.get_by_user(user_ref, filters)
         return [self._to_response(n) for n in notes]
 
@@ -323,11 +338,12 @@ class NoteService:
         filters: NoteStatsFilter,
     ) -> NoteStatsResponse:
         self._validate_stats_combination(filters)
+        self._validate_user_key_filter(user, filters.user_key)
 
         if filters.scope == "all" and user.role != UserRole.ADMIN:
             raise HTTPException(403, "Admin access required for all users scope")
 
-        user_ref = self._resolve_stats_user_ref(user, filters.scope)
+        user_ref = self._resolve_stats_user_ref(user, filters)
         points = self.repo.get_stats(user_ref, filters)
         return NoteStatsResponse(
             x_axis=filters.x_axis,
@@ -337,10 +353,15 @@ class NoteService:
         )
 
     @staticmethod
-    def _resolve_stats_user_ref(user: User, scope: str = "auto") -> str | None:
+    def _resolve_stats_user_ref(
+        user: User,
+        filters: NoteStatsFilter | NoteStatsChartFilter,
+    ) -> str | None:
+        if filters.user_key is not None:
+            return filters.user_key
         if user.role != UserRole.ADMIN:
             return user.user_key
-        if scope == "own":
+        if filters.scope == "own":
             return user.user_key
         return None
 
@@ -382,7 +403,10 @@ class NoteService:
         if filters.scope == "all" and user.role != UserRole.ADMIN:
             raise HTTPException(403, "Admin access required for all users scope")
 
+        self._validate_user_key_filter(user, filters.user_key)
+
         stats_filter = NoteStatsFilter(
+            user_key=filters.user_key,
             parent_key=filters.parent_key,
             linked_note_key=filters.linked_note_key,
             tag=filters.tag,
@@ -395,8 +419,9 @@ class NoteService:
             series_axis=config["series_axis"],
             metric=config["metric"],
             limit=filters.limit,
+            scope=filters.scope,
         )
-        user_ref = self._resolve_stats_user_ref(user, filters.scope)
+        user_ref = self._resolve_stats_user_ref(user, stats_filter)
         points = self.repo.get_stats(user_ref, stats_filter)
         return NoteStatsChartResponse(
             chart=filters.chart,

@@ -6,7 +6,10 @@ import type { Note } from "@/entities/note/types/dto";
 import { formatKey } from "@/pages/logs/ui/helpers";
 import { LogNotePickerModal } from "@/pages/logs/ui/log-note-picker-modal";
 import { Input } from "@/components/ui/input";
-import { DEFAULT_NOTE_FILTERS, type NoteFilters } from "@/pages/note/ui/note-filters";
+import {
+    DEFAULT_NOTE_FILTERS,
+    type NoteFilters,
+} from "@/pages/note/ui/note-filters";
 
 type TextFilterField = Exclude<keyof NoteFilters, "limit" | "offset">;
 
@@ -32,7 +35,9 @@ export function NoteFiltersModal({
     onClose,
 }: NoteFiltersModalProps) {
     const [draft, setDraft] = useState<NoteFilters>(filters);
-    const [notePickerOpen, setNotePickerOpen] = useState(false);
+    const [notePickerTarget, setNotePickerTarget] = useState<
+        "parent_key" | "linked_note_key" | null
+    >(null);
 
     useEffect(() => {
         if (open) {
@@ -42,7 +47,7 @@ export function NoteFiltersModal({
 
     useEffect(() => {
         if (!open) {
-            setNotePickerOpen(false);
+            setNotePickerTarget(null);
         }
     }, [open]);
 
@@ -66,13 +71,22 @@ export function NoteFiltersModal({
         [notes],
     );
 
-    const selectedParent = draft.parent_key
-        ? noteMap.get(draft.parent_key)
+    const selectedParent =
+        draft.parent_key && draft.parent_key !== "root"
+            ? noteMap.get(draft.parent_key)
+            : null;
+    const selectedLinkedNote = draft.linked_note_key
+        ? noteMap.get(draft.linked_note_key)
         : null;
 
     const parentLabel = !draft.parent_key
         ? "Не выбран"
-        : selectedParent?.title || formatKey(draft.parent_key);
+        : draft.parent_key === "root"
+          ? "Корневые заметки"
+          : selectedParent?.title || formatKey(draft.parent_key);
+    const linkedNoteLabel = !draft.linked_note_key
+        ? "Не выбрана"
+        : selectedLinkedNote?.title || formatKey(draft.linked_note_key);
 
     if (!open) {
         return null;
@@ -166,10 +180,54 @@ export function NoteFiltersModal({
                             type="button"
                             variant="outline"
                             className="h-10 justify-between px-3 font-normal"
-                            onClick={() => setNotePickerOpen(true)}
+                            onClick={() => setNotePickerTarget("parent_key")}
                         >
-                            <span className={draft.parent_key ? "text-foreground" : "text-muted-foreground"}>
+                            <span
+                                className={
+                                    draft.parent_key
+                                        ? "text-foreground"
+                                        : "text-muted-foreground"
+                                }
+                            >
                                 Родительская заметка: {parentLabel}
+                            </span>
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={
+                                draft.parent_key === "root"
+                                    ? "default"
+                                    : "outline"
+                            }
+                            size="sm"
+                            className="w-fit"
+                            onClick={() =>
+                                updateTextField("parent_key", "root")
+                            }
+                        >
+                            Только корневые
+                        </Button>
+                    </label>
+
+                    <label className="grid gap-1.5 text-sm md:col-span-2">
+                        <span className="font-medium">linked_note_key</span>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="h-10 justify-between px-3 font-normal"
+                            onClick={() =>
+                                setNotePickerTarget("linked_note_key")
+                            }
+                        >
+                            <span
+                                className={
+                                    draft.linked_note_key
+                                        ? "text-foreground"
+                                        : "text-muted-foreground"
+                                }
+                            >
+                                Связанная заметка: {linkedNoteLabel}
                             </span>
                             <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         </Button>
@@ -249,20 +307,26 @@ export function NoteFiltersModal({
             </form>
 
             <LogNotePickerModal
-                open={notePickerOpen}
+                open={notePickerTarget !== null}
                 notes={notes}
                 loading={notesLoading}
                 error={notesError}
-                selectedNoteKey={draft.parent_key}
+                selectedNoteKey={
+                    notePickerTarget ? draft[notePickerTarget] : ""
+                }
                 onSelect={(noteKey) => {
-                    updateTextField("parent_key", noteKey);
-                    setNotePickerOpen(false);
+                    if (notePickerTarget) {
+                        updateTextField(notePickerTarget, noteKey);
+                    }
+                    setNotePickerTarget(null);
                 }}
                 onClear={() => {
-                    updateTextField("parent_key", "");
-                    setNotePickerOpen(false);
+                    if (notePickerTarget) {
+                        updateTextField(notePickerTarget, "");
+                    }
+                    setNotePickerTarget(null);
                 }}
-                onClose={() => setNotePickerOpen(false)}
+                onClose={() => setNotePickerTarget(null)}
             />
         </div>
     );
